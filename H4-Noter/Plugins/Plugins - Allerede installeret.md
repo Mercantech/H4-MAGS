@@ -1,3 +1,0 @@
-
-
-Jeres note

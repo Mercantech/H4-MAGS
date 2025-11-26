@@ -18,4 +18,9 @@ Rigtig meget af programmering hænger sammen og de emner, som I skal igennem
 
 https://github.com/lynchjames/obsidian-mind-map
 
-![[Pasted image 20251106080108.png]]
+![[Mindmap - GitHub.png]]
+
+
+Hvad var det vigtigste redskab du brugte i dag - 
+
+Hvilken fejl sad du længest med i dag?
