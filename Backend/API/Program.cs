@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text;
 using API.Data;
+using API.Extensions;
 using API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,8 @@ builder.Services.AddControllers();
 // Konfigurer med retry logic for Neon.tech "sleep mode" problemer
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
+        builder.Configuration.GetConnectionStringWithEnv("DefaultConnection") 
+            ?? throw new InvalidOperationException("DefaultConnection er ikke konfigureret"),
         npgsqlOptions => npgsqlOptions
             .EnableRetryOnFailure(
                 maxRetryCount: 3,
@@ -34,9 +36,12 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IOAuthService, OAuthService>(); // Generisk OAuth service
 
 // Configure JWT Authentication
-var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey er ikke konfigureret");
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("JWT Issuer er ikke konfigureret");
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("JWT Audience er ikke konfigureret");
+var jwtSecretKey = builder.Configuration.GetConfigValue("Jwt:SecretKey", "Jwt__SecretKey") 
+    ?? throw new InvalidOperationException("JWT SecretKey er ikke konfigureret");
+var jwtIssuer = builder.Configuration.GetConfigValue("Jwt:Issuer", "Jwt__Issuer") 
+    ?? throw new InvalidOperationException("JWT Issuer er ikke konfigureret");
+var jwtAudience = builder.Configuration.GetConfigValue("Jwt:Audience", "Jwt__Audience") 
+    ?? throw new InvalidOperationException("JWT Audience er ikke konfigureret");
 
 builder.Services.AddAuthentication(options =>
 {

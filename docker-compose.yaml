@@ -4,7 +4,9 @@ services:
       context: ./Backend
       dockerfile: API/Dockerfile
     ports:
-      - "9090:5000"
+      - "9080:5000"
+    env_file:
+      - .env
     environment:
       - ASPNETCORE_URLS=http://+:5000
       - ASPNETCORE_ENVIRONMENT=Production
@@ -18,9 +20,11 @@ services:
       args:
         - BUILDKIT_INLINE_CACHE=1
     ports:
-      - "9091:80"
+      - "9081:80"
     depends_on:
       - backend
+    env_file:
+      - .env
     networks:
       - app-network
 

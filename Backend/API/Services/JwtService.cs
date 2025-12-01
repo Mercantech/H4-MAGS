@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using API.Extensions;
 using API.Models;
 using Microsoft.IdentityModel.Tokens;
 
@@ -27,7 +28,9 @@ public class JwtService : IJwtService
 
     public string GenerateToken(User user)
     {
-        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]!));
+        var secretKey = _configuration.GetConfigValue("Jwt:SecretKey", "Jwt__SecretKey") 
+            ?? throw new InvalidOperationException("JWT SecretKey er ikke konfigureret");
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
@@ -39,11 +42,15 @@ public class JwtService : IJwtService
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
+        var issuer = _configuration.GetConfigValue("Jwt:Issuer", "Jwt__Issuer") ?? "H4-MAGS-API";
+        var audience = _configuration.GetConfigValue("Jwt:Audience", "Jwt__Audience") ?? "H4-MAGS-Client";
+        var expirationMinutes = int.Parse(_configuration.GetConfigValue("Jwt:ExpirationMinutes", "Jwt__ExpirationMinutes") ?? "60");
+
         var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"],
-            audience: _configuration["Jwt:Audience"],
+            issuer: issuer,
+            audience: audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpirationMinutes"] ?? "60") + 120),
+            expires: DateTime.UtcNow.AddMinutes(expirationMinutes + 120),
             // +120 to account for local danish time difference
             signingCredentials: credentials
         );
@@ -64,14 +71,19 @@ public class JwtService : IJwtService
         var tokenHandler = new JwtSecurityTokenHandler();
         try
         {
+            var secretKey = _configuration.GetConfigValue("Jwt:SecretKey", "Jwt__SecretKey") 
+                ?? throw new InvalidOperationException("JWT SecretKey er ikke konfigureret");
+            var issuer = _configuration.GetConfigValue("Jwt:Issuer", "Jwt__Issuer") ?? "H4-MAGS-API";
+            var audience = _configuration.GetConfigValue("Jwt:Audience", "Jwt__Audience") ?? "H4-MAGS-Client";
+
             var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]!)),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
                 ValidateIssuer = true,
-                ValidIssuer = _configuration["Jwt:Issuer"],
+                ValidIssuer = issuer,
                 ValidateAudience = true,
-                ValidAudience = _configuration["Jwt:Audience"],
+                ValidAudience = audience,
                 ValidateLifetime = false, // Vi validerer kun strukturen, ikke udløbstid
                 ClockSkew = TimeSpan.Zero
             }, out SecurityToken validatedToken);

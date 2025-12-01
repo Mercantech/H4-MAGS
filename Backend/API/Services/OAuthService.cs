@@ -1,4 +1,5 @@
 using API.Data;
+using API.Extensions;
 using API.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -28,20 +29,20 @@ public class OAuthService : IOAuthService
     }
 
     /// <summary>
-    /// Indlæs OAuth provider konfigurationer fra appsettings
+    /// Indlæs OAuth provider konfigurationer fra environment variabler eller appsettings
     /// </summary>
     private Dictionary<string, OAuthProviderConfiguration> LoadProviderConfigurations()
     {
         var providers = new Dictionary<string, OAuthProviderConfiguration>();
         
         // Load Google
-        var googleConfig = _configuration.GetSection("OAuth:Google");
-        if (!string.IsNullOrEmpty(googleConfig["ClientId"]))
+        var googleClientId = _configuration.GetConfigValue("OAuth:Google:ClientId", "OAuth__Google__ClientId");
+        if (!string.IsNullOrEmpty(googleClientId))
         {
             providers["Google"] = new OAuthProviderConfiguration
             {
                 ProviderName = "Google",
-                ClientId = googleConfig["ClientId"] ?? string.Empty,
+                ClientId = googleClientId,
                 UserInfoEndpoint = "https://www.googleapis.com/oauth2/v2/userinfo",
                 Issuer = "https://accounts.google.com",
                 ValidateAudience = true,
@@ -56,13 +57,13 @@ public class OAuthService : IOAuthService
         }
 
         // Load Microsoft
-        var microsoftConfig = _configuration.GetSection("OAuth:Microsoft");
-        if (!string.IsNullOrEmpty(microsoftConfig["ClientId"]))
+        var microsoftClientId = _configuration.GetConfigValue("OAuth:Microsoft:ClientId", "OAuth__Microsoft__ClientId");
+        if (!string.IsNullOrEmpty(microsoftClientId))
         {
             providers["Microsoft"] = new OAuthProviderConfiguration
             {
                 ProviderName = "Microsoft",
-                ClientId = microsoftConfig["ClientId"] ?? string.Empty,
+                ClientId = microsoftClientId,
                 UserInfoEndpoint = "https://graph.microsoft.com/v1.0/me",
                 Issuer = "https://login.microsoftonline.com/common/v2.0",
                 ValidateAudience = true,
@@ -77,14 +78,15 @@ public class OAuthService : IOAuthService
         }
 
         // Load GitHub
-        var githubConfig = _configuration.GetSection("OAuth:GitHub");
-        if (!string.IsNullOrEmpty(githubConfig["ClientId"]))
+        var githubClientId = _configuration.GetConfigValue("OAuth:GitHub:ClientId", "OAuth__GitHub__ClientId");
+        var githubClientSecret = _configuration.GetConfigValue("OAuth:GitHub:ClientSecret", "OAuth__GitHub__ClientSecret");
+        if (!string.IsNullOrEmpty(githubClientId))
         {
             providers["GitHub"] = new OAuthProviderConfiguration
             {
                 ProviderName = "GitHub",
-                ClientId = githubConfig["ClientId"] ?? string.Empty,
-                ClientSecret = githubConfig["ClientSecret"], // Til OAuth flow
+                ClientId = githubClientId,
+                ClientSecret = githubClientSecret, // Til OAuth flow
                 UserInfoEndpoint = "https://api.github.com/user",
                 Issuer = null, // GitHub bruger ikke standard OpenID Connect
                 ValidateAudience = false,
