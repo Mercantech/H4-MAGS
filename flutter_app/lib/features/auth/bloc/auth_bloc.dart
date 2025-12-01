@@ -19,6 +19,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         _authStorage = authStorage,
         super(const AuthInitial()) {
     on<LoginWithGoogleEvent>(_onLoginWithGoogle);
+    on<LoginWithGitHubEvent>(_onLoginWithGitHub);
     on<LogoutEvent>(_onLogout);
     on<CheckAuthStatusEvent>(_onCheckAuthStatus);
   }
@@ -31,6 +32,42 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(const AuthLoading());
 
     final result = await _authRepository.loginWithGoogle();
+
+    // Håndter resultatet eksplicit i stedet for at bruge when() med async callbacks
+    if (result.isSuccess) {
+      final authResponse = result.dataOrNull!;
+      
+      // Gem tokens i secure storage FØR vi emitter state
+      try {
+        await _authStorage.saveAuthResponse(authResponse);
+      } catch (e) {
+        // Hvis gemning fejler, log fejl men fortsæt
+        print('⚠️ [DEBUG] Kunne ikke gemme tokens: $e');
+      }
+      
+      // Tjek om emitter stadig er aktiv før vi emitter
+      if (!emit.isDone) {
+        emit(AuthAuthenticated(
+          authResponse: authResponse,
+          user: authResponse.user,
+        ));
+      }
+    } else {
+      final error = result.exceptionOrNull!;
+      if (!emit.isDone) {
+        emit(AuthError(error.userMessage));
+      }
+    }
+  }
+
+  /// Login med GitHub
+  Future<void> _onLoginWithGitHub(
+    LoginWithGitHubEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+
+    final result = await _authRepository.loginWithGitHub();
 
     // Håndter resultatet eksplicit i stedet for at bruge when() med async callbacks
     if (result.isSuccess) {

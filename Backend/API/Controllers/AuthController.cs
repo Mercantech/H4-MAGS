@@ -256,6 +256,160 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
+    /// GitHub OAuth callback endpoint
+    /// </summary>
+    /// <remarks>
+    /// Auth: Anonymous - Modtager authorization code fra GitHub og logger brugeren ind.
+    /// Dette endpoint kaldes når GitHub redirecter efter bruger har godkendt app.
+    /// </remarks>
+    [HttpGet("github/callback")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(AuthResponseDto), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
+    public async Task<IActionResult> GitHubCallback([FromQuery] string? code, [FromQuery] string? error, [FromQuery] string? state)
+    {
+        if (!string.IsNullOrEmpty(error))
+        {
+            _logger.LogWarning("GitHub OAuth fejl: {Error}", error);
+            return BadRequest(new { message = $"GitHub OAuth fejl: {error}" });
+        }
+
+        if (string.IsNullOrEmpty(code))
+        {
+            _logger.LogWarning("GitHub OAuth callback mangler authorization code");
+            return BadRequest(new { message = "Authorization code mangler" });
+        }
+
+        // Hent redirect URI (skal matche GitHub OAuth App konfiguration)
+        var redirectUri = $"{Request.Scheme}://{Request.Host}/api/auth/github/callback";
+        _logger.LogInformation("GitHub OAuth callback modtaget. Code: {Code}, RedirectUri: {RedirectUri}", 
+            code.Substring(0, Math.Min(20, code.Length)) + "...", redirectUri);
+
+        // Exchange authorization code for access token
+        var accessToken = await _oauthService.ExchangeGitHubCodeForTokenAsync(code, redirectUri);
+        
+        if (string.IsNullOrEmpty(accessToken))
+        {
+            _logger.LogWarning("Kunne ikke exchange GitHub authorization code for access token");
+            return Unauthorized(new { message = "Kunne ikke hente access token fra GitHub" });
+        }
+
+        // Hent brugerinfo fra GitHub
+        var userInfo = await _oauthService.GetUserInfoFromAccessTokenAsync(accessToken, "GitHub");
+        
+        if (userInfo == null)
+        {
+            _logger.LogWarning("Kunne ikke hente brugerinfo fra GitHub");
+            return Unauthorized(new { message = "Kunne ikke hente brugerinfo fra GitHub" });
+        }
+
+        // Hent eller opret bruger
+        var user = await _oauthService.GetOrCreateUserFromOAuthAsync(userInfo, "GitHub");
+        
+        if (user == null)
+        {
+            _logger.LogWarning("Kunne ikke hente eller oprette bruger fra GitHub");
+            return Unauthorized(new { message = "Kunne ikke hente eller oprette bruger fra GitHub" });
+        }
+
+        _logger.LogInformation("GitHub OAuth login succesfuld for bruger: {Email}", user.Email);
+        
+        // Generer auth response direkte (uden at wrappe i ActionResult)
+        var token = _jwtService.GenerateToken(user);
+        var refreshToken = _jwtService.GenerateRefreshToken();
+
+        // Gem refresh token i database
+        var refreshTokenEntity = new RefreshToken
+        {
+            Token = refreshToken,
+            UserId = user.Id,
+            ExpiresAt = DateTime.UtcNow.AddDays(int.Parse(_configuration["Jwt:RefreshTokenExpirationDays"] ?? "7")),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.RefreshTokens.Add(refreshTokenEntity);
+        await _context.SaveChangesAsync();
+
+        var authResponseDto = new AuthResponseDto
+        {
+            Token = token,
+            RefreshToken = refreshToken,
+            Expires = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpirationMinutes"] ?? "60")),
+            User = new UserDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                Role = user.Role.ToString(),
+                CreatedAt = user.CreatedAt,
+                Picture = user.Picture
+            }
+        };
+
+        // Serialiser auth response til JSON med camelCase
+        var jsonOptions = new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+        };
+        var jsonString = System.Text.Json.JsonSerializer.Serialize(authResponseDto, jsonOptions);
+        
+        // Escape JSON string for JavaScript (escape quotes and backslashes)
+        var escapedJson = jsonString.Replace("\\", "\\\\").Replace("'", "\\'").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n");
+        
+        // Returner HTML page der sender token til Flutter app via postMessage
+        var html = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GitHub Login Success</title>
+    <meta charset=""utf-8"">
+    <script>
+        (function() {{
+            try {{
+                // Parse JSON fra backend (som escaped string)
+                var jsonString = '{escapedJson}';
+                var authData = JSON.parse(jsonString);
+                
+                console.log('GitHub OAuth callback: Parsed auth data', authData);
+                
+                // Send til Flutter app
+                if (window.opener && !window.opener.closed) {{
+                    window.opener.postMessage({{
+                        type: 'github_oauth_success',
+                        data: authData
+                    }}, '*');
+                    
+                    console.log('GitHub OAuth success message sent to opener');
+                    
+                    // Luk popup efter kort delay
+                    setTimeout(function() {{
+                        window.close();
+                    }}, 500);
+                }} else {{
+                    console.error('Window opener is null or closed');
+                    document.body.innerHTML = '<p>Error: Could not communicate with parent window</p>';
+                    setTimeout(function() {{
+                        window.close();
+                    }}, 3000);
+                }}
+            }} catch (error) {{
+                console.error('Error in GitHub OAuth callback:', error);
+                document.body.innerHTML = '<p>Error: ' + error.message + '</p><pre>' + error.stack + '</pre>';
+            }}
+        }})();
+    </script>
+</head>
+<body>
+    <p>Login succesfuld! Du kan lukke dette vindue.</p>
+</body>
+</html>";
+        
+        return Content(html, "text/html");
+    }
+
+    /// <summary>
     /// Helper metode til at generere auth response
     /// </summary>
     private async Task<ActionResult<AuthResponseDto>> GenerateAuthResponse(User user)

@@ -15,6 +15,11 @@ class LoginWithGoogleEvent extends AuthEvent {
   const LoginWithGoogleEvent();
 }
 
+/// Login med GitHub (OAuth popup)
+class LoginWithGitHubEvent extends AuthEvent {
+  const LoginWithGitHubEvent();
+}
+
 /// Logout
 class LogoutEvent extends AuthEvent {
   const LogoutEvent();

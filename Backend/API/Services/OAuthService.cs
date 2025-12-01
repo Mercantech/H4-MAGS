@@ -84,7 +84,7 @@ public class OAuthService : IOAuthService
             {
                 ProviderName = "GitHub",
                 ClientId = githubConfig["ClientId"] ?? string.Empty,
-                ClientSecret = null,
+                ClientSecret = githubConfig["ClientSecret"], // Til OAuth flow
                 UserInfoEndpoint = "https://api.github.com/user",
                 Issuer = null, // GitHub bruger ikke standard OpenID Connect
                 ValidateAudience = false,
@@ -157,15 +157,29 @@ public class OAuthService : IOAuthService
             var userInfo = new OAuthUserInfo
             {
                 ProviderUserId = GetJsonProperty(root, providerConfig.UserInfoMapping.IdProperty) ?? string.Empty,
-                Email = GetJsonProperty(root, providerConfig.UserInfoMapping.EmailProperty) ?? string.Empty,
+                Email = GetJsonProperty(root, providerConfig.UserInfoMapping.EmailProperty),
                 Name = GetJsonProperty(root, providerConfig.UserInfoMapping.NameProperty),
                 Picture = GetJsonProperty(root, providerConfig.UserInfoMapping.PictureProperty)
             };
 
+            // GitHub specifik: Hent email fra /user/emails hvis email er null
+            if (providerName == "GitHub" && string.IsNullOrEmpty(userInfo.Email))
+            {
+                _logger.LogInformation("GitHub email er null, henter fra /user/emails endpoint...");
+                userInfo.Email = await GetGitHubEmailAsync(httpClient, accessToken);
+            }
+
             if (string.IsNullOrEmpty(userInfo.ProviderUserId) || string.IsNullOrEmpty(userInfo.Email))
             {
-                _logger.LogWarning("{Provider} API response mangler påkrævede felter. JSON: {Json}", providerName, json);
+                _logger.LogWarning("{Provider} API response mangler påkrævede felter. ProviderUserId: {Id}, Email: {Email}, JSON: {Json}", 
+                    providerName, userInfo.ProviderUserId, userInfo.Email ?? "null", json);
                 return null;
+            }
+            
+            // Sæt email til empty string hvis null (for at undgå null reference)
+            if (userInfo.Email == null)
+            {
+                userInfo.Email = string.Empty;
             }
 
             _logger.LogInformation("Hentet brugerinfo fra {Provider}: {Email}", providerName, userInfo.Email);
@@ -180,24 +194,129 @@ public class OAuthService : IOAuthService
 
     /// <summary>
     /// Hjælpemetode til at hente JSON property med case-insensitive match
+    /// Håndterer både string og number types (f.eks. GitHub's id er et nummer)
     /// </summary>
     private string? GetJsonProperty(JsonElement root, string? propertyName)
     {
         if (string.IsNullOrEmpty(propertyName))
             return null;
 
-        // Prøv exact match først
-        if (root.TryGetProperty(propertyName, out var element))
-            return element.GetString();
+        JsonElement? element = null;
 
-        // Prøv case-insensitive match
-        foreach (var prop in root.EnumerateObject())
+        // Prøv exact match først
+        if (root.TryGetProperty(propertyName, out var exactElement))
         {
-            if (string.Equals(prop.Name, propertyName, StringComparison.OrdinalIgnoreCase))
-                return prop.Value.GetString();
+            element = exactElement;
+        }
+        else
+        {
+            // Prøv case-insensitive match
+            foreach (var prop in root.EnumerateObject())
+            {
+                if (string.Equals(prop.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    element = prop.Value;
+                    break;
+                }
+            }
         }
 
-        return null;
+        if (!element.HasValue)
+            return null;
+
+        var value = element.Value;
+
+        // Håndter forskellige JSON types
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString(),
+            JsonValueKind.Number => value.GetRawText(), // Konverter nummer til string
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            JsonValueKind.Null => null,
+            _ => value.GetRawText() // Fallback for andre typer
+        };
+    }
+
+    /// <summary>
+    /// Hent GitHub email fra /user/emails endpoint
+    /// 
+    /// GitHub's /user endpoint returnerer ikke altid email (hvis bruger har skjult det).
+    /// Vi skal hente fra /user/emails i stedet.
+    /// </summary>
+    private async Task<string?> GetGitHubEmailAsync(HttpClient httpClient, string accessToken)
+    {
+        try
+        {
+            // GitHub kræver User-Agent header
+            // httpClient har allerede User-Agent sat fra GetUserInfoFromAccessTokenAsync
+            // Men vi sikrer at det er sat hvis metoden kaldes direkte
+            if (!httpClient.DefaultRequestHeaders.Contains("User-Agent"))
+            {
+                httpClient.DefaultRequestHeaders.Add("User-Agent", "H4-MAGS-API");
+            }
+            
+            var emailsResponse = await httpClient.GetAsync("https://api.github.com/user/emails");
+            
+            if (!emailsResponse.IsSuccessStatusCode)
+            {
+                var errorContent = await emailsResponse.Content.ReadAsStringAsync();
+                _logger.LogWarning("GitHub /user/emails fejlede. Status: {StatusCode}, Content: {Content}", 
+                    emailsResponse.StatusCode, errorContent);
+                return null;
+            }
+
+            var emailsJson = await emailsResponse.Content.ReadAsStringAsync();
+            var emailsDoc = JsonDocument.Parse(emailsJson);
+            var emailsArray = emailsDoc.RootElement;
+
+            // Find primær email eller første verified email
+            foreach (var emailObj in emailsArray.EnumerateArray())
+            {
+                var email = GetJsonProperty(emailObj, "email");
+                var isPrimary = emailObj.TryGetProperty("primary", out var primaryElement) && primaryElement.GetBoolean();
+                var isVerified = emailObj.TryGetProperty("verified", out var verifiedElement) && verifiedElement.GetBoolean();
+
+                // Prioritér primær email
+                if (isPrimary && !string.IsNullOrEmpty(email))
+                {
+                    _logger.LogInformation("Fundet primær GitHub email: {Email}", email);
+                    return email;
+                }
+            }
+
+            // Hvis ingen primær, find første verified
+            foreach (var emailObj in emailsArray.EnumerateArray())
+            {
+                var email = GetJsonProperty(emailObj, "email");
+                var isVerified = emailObj.TryGetProperty("verified", out var verifiedElement) && verifiedElement.GetBoolean();
+
+                if (isVerified && !string.IsNullOrEmpty(email))
+                {
+                    _logger.LogInformation("Fundet verified GitHub email: {Email}", email);
+                    return email;
+                }
+            }
+
+            // Hvis ingen verified, brug første email
+            foreach (var emailObj in emailsArray.EnumerateArray())
+            {
+                var email = GetJsonProperty(emailObj, "email");
+                if (!string.IsNullOrEmpty(email))
+                {
+                    _logger.LogInformation("Fundet GitHub email: {Email}", email);
+                    return email;
+                }
+            }
+
+            _logger.LogWarning("Ingen email fundet i GitHub /user/emails response");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Fejl ved hentning af GitHub email fra /user/emails");
+            return null;
+        }
     }
 
     public async Task<User?> GetOrCreateUserFromOAuthAsync(OAuthUserInfo userInfo, string providerName)
@@ -305,6 +424,82 @@ public class OAuthService : IOAuthService
 
         _logger.LogInformation("Ny bruger oprettet fra {Provider}: {Email}, ID: {Id}", providerName, normalizedEmail, newUser.Id);
         return newUser;
+    }
+
+    /// <summary>
+    /// Exchange GitHub authorization code for access token
+    /// </summary>
+    public async Task<string?> ExchangeGitHubCodeForTokenAsync(string code, string redirectUri)
+    {
+        if (!_providers.TryGetValue("GitHub", out var githubConfig))
+        {
+            _logger.LogError("GitHub provider ikke konfigureret");
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(githubConfig.ClientSecret))
+        {
+            _logger.LogError("GitHub ClientSecret ikke konfigureret i appsettings.json");
+            return null;
+        }
+
+        try
+        {
+            _logger.LogInformation("Exchanging GitHub authorization code for access token...");
+            
+            using var httpClient = new HttpClient();
+            var requestBody = new Dictionary<string, string>
+            {
+                { "client_id", githubConfig.ClientId },
+                { "client_secret", githubConfig.ClientSecret },
+                { "code", code },
+                { "redirect_uri", redirectUri }
+            };
+
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://github.com/login/oauth/access_token")
+            {
+                Content = new FormUrlEncodedContent(requestBody),
+                Headers = { { "Accept", "application/json" } }
+            };
+
+            var response = await httpClient.SendAsync(request);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("GitHub token exchange fejlede. Status: {StatusCode}, Content: {Content}", 
+                    response.StatusCode, errorContent);
+                return null;
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            var jsonDoc = JsonDocument.Parse(json);
+            var root = jsonDoc.RootElement;
+
+            if (root.TryGetProperty("access_token", out var accessTokenElement))
+            {
+                var accessToken = accessTokenElement.GetString();
+                _logger.LogInformation("GitHub access token hentet succesfuldt");
+                return accessToken;
+            }
+
+            if (root.TryGetProperty("error", out var errorElement))
+            {
+                var error = errorElement.GetString();
+                var errorDescription = root.TryGetProperty("error_description", out var desc) 
+                    ? desc.GetString() 
+                    : "Unknown error";
+                _logger.LogError("GitHub token exchange fejl: {Error}, Description: {Description}", 
+                    error, errorDescription);
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Uventet fejl ved GitHub token exchange");
+            return null;
+        }
     }
 }
 

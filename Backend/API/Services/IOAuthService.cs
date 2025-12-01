@@ -21,6 +21,11 @@ public interface IOAuthService
     /// Hent eller opret bruger fra OAuth login
     /// </summary>
     Task<User?> GetOrCreateUserFromOAuthAsync(OAuthUserInfo userInfo, string providerName);
+    
+    /// <summary>
+    /// Exchange GitHub authorization code for access token
+    /// </summary>
+    Task<string?> ExchangeGitHubCodeForTokenAsync(string code, string redirectUri);
 }
 
 /// <summary>

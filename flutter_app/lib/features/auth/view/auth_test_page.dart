@@ -19,7 +19,7 @@ class AuthTestPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Google SSO Test'),
+        title: const Text('OAuth Login Test'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: BlocBuilder<AuthBloc, AuthState>(
@@ -51,7 +51,7 @@ class _AuthTestContent extends StatelessWidget {
             children: [
               // Header
               const Text(
-                'Google Sign-In Test',
+                'OAuth Login Test',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -60,7 +60,7 @@ class _AuthTestContent extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Test din Google SSO integration',
+                'Test Google og GitHub OAuth integration',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[600],
@@ -76,14 +76,21 @@ class _AuthTestContent extends StatelessWidget {
 
               // Action Buttons
               if (state is! AuthLoading) ...[
-                if (state is AuthUnauthenticated || state is AuthInitial)
+                if (state is AuthUnauthenticated || state is AuthInitial) ...[
                   _buildGoogleLoginButton(context),
+                  const SizedBox(height: 12),
+                  _buildGitHubLoginButton(context),
+                ],
                 if (state is AuthAuthenticated) ...[
                   _buildUserInfoCard(context, state),
                   const SizedBox(height: 16),
                   _buildLogoutButton(context),
                 ],
-                if (state is AuthError) _buildRetryButton(context),
+                if (state is AuthError) ...[
+                  _buildErrorCard(context, state),
+                  const SizedBox(height: 16),
+                  _buildRetryButtons(context),
+                ],
               ],
 
               const SizedBox(height: 32),
@@ -182,6 +189,22 @@ class _AuthTestContent extends StatelessWidget {
       onSignIn: () {
         context.read<AuthBloc>().add(const LoginWithGoogleEvent());
       },
+    );
+  }
+
+  Widget _buildGitHubLoginButton(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: () {
+        context.read<AuthBloc>().add(const LoginWithGitHubEvent());
+      },
+      icon: const Icon(Icons.code),
+      label: const Text('Login med GitHub'),
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        backgroundColor: const Color(0xFF24292e), // GitHub's dark color
+        foregroundColor: Colors.white,
+        elevation: 2,
+      ),
     );
   }
 
@@ -489,16 +512,49 @@ class _AuthTestContent extends StatelessWidget {
     );
   }
 
-  Widget _buildRetryButton(BuildContext context) {
-    return ElevatedButton.icon(
-      onPressed: () {
-        context.read<AuthBloc>().add(const LoginWithGoogleEvent());
-      },
-      icon: const Icon(Icons.refresh),
-      label: const Text('Prøv Igen'),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+  Widget _buildErrorCard(BuildContext context, AuthError state) {
+    return Card(
+      color: Colors.red[50],
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.error, color: Colors.red[700]),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Login Fejlede',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red[700],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              state.message,
+              style: TextStyle(color: Colors.red[700]),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildRetryButtons(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildGoogleLoginButton(context),
+        const SizedBox(height: 12),
+        _buildGitHubLoginButton(context),
+      ],
     );
   }
 
