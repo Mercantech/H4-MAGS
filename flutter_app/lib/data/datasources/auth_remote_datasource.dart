@@ -93,5 +93,17 @@ class AuthRemoteDataSource {
       fromJson: (json) => AuthResponseModel.fromJson(json as Map<String, dynamic>),
     );
   }
+
+  /// Opdater password for nuværende bruger
+  /// Virker både for OAuth brugere (tilføjer password) og normale brugere (opdaterer password)
+  Future<ApiResult<void>> updatePassword(String newPassword) async {
+    return await _apiClient.post<void>(
+      '/auth/update-password',
+      body: {
+        'newPassword': newPassword,
+      },
+      fromJson: (_) => {},
+    );
+  }
 }
 

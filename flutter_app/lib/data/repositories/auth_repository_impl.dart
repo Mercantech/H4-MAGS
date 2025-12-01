@@ -136,6 +136,12 @@ class AuthRepositoryImpl {
     return await _remoteDataSource.logout(refreshToken);
   }
 
+  /// Opdater password for nuværende bruger
+  /// Virker både for OAuth brugere (tilføjer password) og normale brugere (opdaterer password)
+  Future<ApiResult<void>> updatePassword(String newPassword) async {
+    return await _remoteDataSource.updatePassword(newPassword);
+  }
+
   /// Login med GitHub via OAuth flow (popup)
   /// 
   /// Åbner GitHub OAuth popup og håndterer hele flowet automatisk.

@@ -493,5 +493,36 @@ public class AuthController : ControllerBase
 
         return Ok(userDto);
     }
+
+    /// <summary>
+    /// Opdater password for nuværende bruger
+    /// </summary>
+    /// <remarks>
+    /// Auth: Authenticated - Opdaterer password for den authentificerede bruger.
+    /// Virker både for OAuth brugere (tilføjer password) og normale brugere (opdaterer password).
+    /// </remarks>
+    [HttpPost("update-password")]
+    [Authorize]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
+    public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordDto dto)
+    {
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var success = await _authService.AddPasswordToUserAsync(userId, dto.NewPassword);
+        
+        if (!success)
+        {
+            return BadRequest(new { message = "Kunne ikke opdatere password" });
+        }
+
+        _logger.LogInformation("Password opdateret for bruger ID: {UserId}", userId);
+        return Ok(new { message = "Password opdateret succesfuldt" });
+    }
 }
 

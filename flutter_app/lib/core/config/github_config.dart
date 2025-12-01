@@ -16,7 +16,7 @@ class GitHubConfig {
   
   /// Backend callback URL
   /// 
-  /// Denne URL skal matche GitHub OAuth App callback URL konfiguration PRÆCIST
+  /// Denne URL skal matche GitHub OAuth App callback URL konfiguration 
   /// Bemærk: Bruger lowercase /api/auth/ for konsistens
   static String getCallbackUrl(String baseUrl) {
     return '$baseUrl/api/auth/github/callback';

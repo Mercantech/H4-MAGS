@@ -22,6 +22,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LoginWithGitHubEvent>(_onLoginWithGitHub);
     on<LogoutEvent>(_onLogout);
     on<CheckAuthStatusEvent>(_onCheckAuthStatus);
+    on<UpdatePasswordEvent>(_onUpdatePassword);
   }
 
   /// Login med Google
@@ -177,6 +178,41 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (e) {
       print('❌ [DEBUG] Fejl ved tjek af auth status: $e');
       emit(const AuthUnauthenticated());
+    }
+  }
+
+  /// Opdater password
+  /// 
+  /// Opdaterer password for nuværende bruger.
+  /// Virker både for OAuth brugere (tilføjer password) og normale brugere (opdaterer password).
+  /// Beholder authenticated state efter opdatering.
+  Future<void> _onUpdatePassword(
+    UpdatePasswordEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    // Kun hvis brugeren er authenticated
+    if (state is! AuthAuthenticated) {
+      emit(const AuthError('Du skal være logget ind for at opdatere password'));
+      return;
+    }
+
+    final result = await _authRepository.updatePassword(event.newPassword);
+
+    if (result.isSuccess) {
+      // Password opdateret succesfuldt - behold authenticated state
+      // Vi behøver ikke at opdatere state, da password opdatering ikke ændrer authentication
+      final currentState = state as AuthAuthenticated;
+      emit(currentState); // Re-emit samme state for at triggere UI update
+    } else {
+      final error = result.exceptionOrNull!;
+      emit(AuthError(error.userMessage));
+      // Gå tilbage til authenticated state efter fejl
+      final currentState = state as AuthAuthenticated;
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (!emit.isDone) {
+          emit(currentState);
+        }
+      });
     }
   }
 }

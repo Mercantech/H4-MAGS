@@ -8,6 +8,7 @@ import '../../../data/repositories/auth_repository_impl.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import 'password_update_form.dart';
 
 /// Test side til Google SSO
 /// 
@@ -83,6 +84,8 @@ class _AuthTestContent extends StatelessWidget {
                 ],
                 if (state is AuthAuthenticated) ...[
                   _buildUserInfoCard(context, state),
+                  const SizedBox(height: 16),
+                  _buildPasswordUpdateCard(context, state),
                   const SizedBox(height: 16),
                   _buildLogoutButton(context),
                 ],
@@ -497,6 +500,10 @@ class _AuthTestContent extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildPasswordUpdateCard(BuildContext context, AuthAuthenticated state) {
+    return PasswordUpdateForm(userId: state.user.id);
   }
 
   Widget _buildLogoutButton(BuildContext context) {

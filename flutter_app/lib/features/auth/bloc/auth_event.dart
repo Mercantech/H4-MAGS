@@ -30,3 +30,13 @@ class CheckAuthStatusEvent extends AuthEvent {
   const CheckAuthStatusEvent();
 }
 
+/// Opdater password for nuværende bruger
+class UpdatePasswordEvent extends AuthEvent {
+  final String newPassword;
+
+  const UpdatePasswordEvent(this.newPassword);
+
+  @override
+  List<Object?> get props => [newPassword];
+}
+
