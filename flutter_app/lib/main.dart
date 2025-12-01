@@ -24,9 +24,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 1. Initialisér App Configuration
-  // TODO: Skift til Environment.production når du deployer til produktion!
-  await AppConfig.initialize(Environment.development);
-  // await AppConfig.initialize(Environment.production);
+  // Detekter automatisk om vi kører i Docker (via environment variabel)
+  // Ellers brug development som standard
+  final isDocker = const String.fromEnvironment('DOCKER_ENV', defaultValue: 'false') == 'true';
+  final environment = isDocker ? Environment.production : Environment.development;
+  
+  await AppConfig.initialize(environment);
   
   // Log hvilket environment vi kører i
   debugPrint('🚀 Starting app in ${AppConfig.instance.environment.name} mode');
