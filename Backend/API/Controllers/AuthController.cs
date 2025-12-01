@@ -283,7 +283,19 @@ public class AuthController : ControllerBase
 
         // Hent redirect URI (skal matche GitHub OAuth App konfiguration PRÆCIST - case-sensitive!)
         // Controller route er "api/auth" (lowercase for konsistens)
-        var redirectUri = $"{Request.Scheme}://{Request.Host}/api/auth/github/callback";
+        // Brug HTTPS hvis request kommer gennem proxy (X-Forwarded-Proto) eller i production
+        var scheme = Request.Headers["X-Forwarded-Proto"].FirstOrDefault() 
+                     ?? Request.Headers["X-Forwarded-Scheme"].FirstOrDefault()
+                     ?? (Request.IsHttps ? "https" : Request.Scheme);
+        
+        // Force HTTPS i production (når vi kører på mercantec.tech domain)
+        // GitHub OAuth App callback URL er altid HTTPS
+        if (Request.Host.Host.Contains("mercantec.tech"))
+        {
+            scheme = "https";
+        }
+        
+        var redirectUri = $"{scheme}://{Request.Host}/api/auth/github/callback";
         _logger.LogInformation("GitHub OAuth callback modtaget. Code: {Code}, RedirectUri: {RedirectUri}", 
             code.Substring(0, Math.Min(20, code.Length)) + "...", redirectUri);
 
