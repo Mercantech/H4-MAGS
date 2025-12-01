@@ -19,7 +19,6 @@ services:
       dockerfile: Dockerfile
       args:
         - BUILDKIT_INLINE_CACHE=1
-        - DOCKER_ENV=true
     ports:
       - "9081:80"
     depends_on:

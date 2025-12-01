@@ -1,9 +1,6 @@
 # Stage 1: Build Flutter web app
 FROM ghcr.io/cirruslabs/flutter:stable AS build-env
 
-# Accept build argument for Docker environment detection
-ARG DOCKER_ENV=false
-
 # Set working directory
 WORKDIR /app
 
@@ -21,8 +18,8 @@ COPY assets/ ./assets/
 # Copy other necessary files
 COPY analysis_options.yaml ./
 
-# Build for web with Docker environment flag
-RUN flutter build web --release --dart-define=DOCKER_ENV=$DOCKER_ENV
+# Build for web
+RUN flutter build web --release
 
 # Stage 2: Create the run-time image
 FROM nginx:alpine

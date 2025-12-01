@@ -1,3 +1,4 @@
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/config/app_config.dart';
@@ -24,15 +25,19 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 1. Initialisér App Configuration
-  // Detekter automatisk om vi kører i Docker (via environment variabel)
-  // Ellers brug development som standard
-  final isDocker = const String.fromEnvironment('DOCKER_ENV', defaultValue: 'false') == 'true';
-  final environment = isDocker ? Environment.production : Environment.development;
+  // Detekter automatisk environment baseret på hostname
+  // Hvis vi kører på localhost, brug development, ellers brug production
+  final hostname = html.window.location.hostname ?? '';
+  final isLocalhost = hostname == 'localhost' || 
+                      hostname == '127.0.0.1' || 
+                      hostname.isEmpty;
+  final environment = isLocalhost ? Environment.development : Environment.production;
   
   await AppConfig.initialize(environment);
   
   // Log hvilket environment vi kører i
   debugPrint('🚀 Starting app in ${AppConfig.instance.environment.name} mode');
+  debugPrint('🌐 Hostname: $hostname');
   debugPrint('📡 API Base URL: ${AppConfig.instance.apiBaseUrl}');
 
   // 2. Setup Dependency Injection
