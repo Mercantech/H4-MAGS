@@ -17,19 +17,22 @@ public class AuthController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthController> _logger;
+    private readonly IOAuthService _oauthService;
 
     public AuthController(
         IAuthService authService,
         IJwtService jwtService,
         ApplicationDbContext context,
         IConfiguration configuration,
-        ILogger<AuthController> logger)
+        ILogger<AuthController> logger,
+        IOAuthService oauthService)
     {
         _authService = authService;
         _jwtService = jwtService;
         _context = context;
         _configuration = configuration;
         _logger = logger;
+        _oauthService = oauthService;
     }
 
     /// <summary>
@@ -210,81 +213,46 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Login med Google (ID Token)
-    /// </summary>
-    /// <remarks>Auth: Anonymous - Login med Google ID token. Opretter automatisk bruger hvis den ikke eksisterer.</remarks>
-    [HttpPost("google-login")]
-    [AllowAnonymous]
-    public async Task<ActionResult<AuthResponseDto>> GoogleLogin(GoogleLoginDto googleLoginDto)
-    {
-        var user = await _authService.LoginWithGoogleAsync(googleLoginDto.IdToken);
-
-        if (user == null)
-        {
-            return Unauthorized(new { message = "Ugyldig Google token" });
-        }
-
-        return await GenerateAuthResponse(user);
-    }
-
-    /// <summary>
-    /// Login med Google (Access Token) - Workaround for Flutter Web
+    /// Generisk OAuth login - Virker med alle providers (Google, Microsoft, GitHub, etc.)
     /// </summary>
     /// <remarks>
-    /// Auth: Anonymous - Login med Google access token. 
-    /// Dette er en workaround for Flutter Web hvor idToken ikke altid er tilgængelig.
-    /// Backend henter brugerinfo direkte fra Google API ved hjælp af access_token.
+    /// Auth: Anonymous - Login med OAuth access token fra hvilken som helst provider.
+    /// Understøtter: Google, Microsoft, GitHub, Facebook (konfigureret via appsettings.json)
     /// </remarks>
-    /// <summary>
-    /// Login med Google (Access Token) - Workaround for Flutter Web
-    /// </summary>
-    /// <remarks>
-    /// Auth: Anonymous - Login med Google access token. 
-    /// Dette er en workaround for Flutter Web hvor idToken ikke altid er tilgængelig.
-    /// Backend henter brugerinfo direkte fra Google API ved hjælp af access_token.
-    /// </remarks>
-    [HttpPost("google-login-access-token")]
+    [HttpPost("oauth-login")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(AuthResponseDto), 200)]
     [ProducesResponseType(400)]
     [ProducesResponseType(401)]
-    public async Task<ActionResult<AuthResponseDto>> GoogleLoginWithAccessToken([FromBody] GoogleAccessTokenDto? dto)
+    public async Task<ActionResult<AuthResponseDto>> OAuthLogin([FromBody] OAuthLoginDto? dto)
     {
-        _logger.LogInformation("🔍 [DEBUG] ===== Google Login Access Token Endpoint Kaldt =====");
-        _logger.LogInformation("🔍 [DEBUG] Request modtaget - DTO er null: {IsNull}", dto == null);
-        
-        if (dto == null)
+        if (dto == null || string.IsNullOrEmpty(dto.Provider) || string.IsNullOrEmpty(dto.AccessToken))
         {
-            _logger.LogWarning("❌ [DEBUG] DTO er null - tjek request body");
-            return BadRequest(new { message = "Request body er påkrævet" });
+            return BadRequest(new { message = "Provider og AccessToken er påkrævet" });
         }
-        
-        _logger.LogInformation("📥 [DEBUG] Access token længde: {Length}", dto.AccessToken?.Length ?? 0);
-        _logger.LogInformation("📥 [DEBUG] Access token preview: {Preview}", 
-            !string.IsNullOrEmpty(dto.AccessToken) && dto.AccessToken.Length > 50 
-                ? dto.AccessToken.Substring(0, 50) + "..." 
-                : dto.AccessToken ?? "null");
-        
-        if (string.IsNullOrEmpty(dto.AccessToken))
-        {
-            _logger.LogWarning("❌ [DEBUG] Access token er null eller tom");
-            return BadRequest(new { message = "Access token er påkrævet" });
-        }
-        
-        _logger.LogInformation("📤 [DEBUG] Kalder AuthService.LoginWithGoogleAccessTokenAsync...");
-        var user = await _authService.LoginWithGoogleAccessTokenAsync(dto.AccessToken);
 
+        _logger.LogInformation("OAuth login forsøg med provider: {Provider}", dto.Provider);
+
+        // Hent brugerinfo fra provider
+        var userInfo = await _oauthService.GetUserInfoFromAccessTokenAsync(dto.AccessToken, dto.Provider);
+        
+        if (userInfo == null)
+        {
+            _logger.LogWarning("Kunne ikke hente brugerinfo fra {Provider}", dto.Provider);
+            return Unauthorized(new { message = $"Kunne ikke hente brugerinfo fra {dto.Provider}" });
+        }
+
+        // Hent eller opret bruger
+        var user = await _oauthService.GetOrCreateUserFromOAuthAsync(userInfo, dto.Provider);
+        
         if (user == null)
         {
-            _logger.LogWarning("❌ [DEBUG] Kunne ikke hente eller oprette bruger fra access_token");
-            return Unauthorized(new { message = "Kunne ikke hente brugerinfo fra Google" });
+            _logger.LogWarning("Kunne ikke hente eller oprette bruger fra {Provider}", dto.Provider);
+            return Unauthorized(new { message = $"Kunne ikke hente eller oprette bruger fra {dto.Provider}" });
         }
 
-        _logger.LogInformation("✅ [DEBUG] Bruger fundet/oprettet: {Email}, ID: {Id}", user.Email, user.Id);
-        _logger.LogInformation("✅ [DEBUG] Genererer auth response...");
-        var result = await GenerateAuthResponse(user);
-        _logger.LogInformation("✅ [DEBUG] ===== Google Login Access Token SUCCESS =====");
-        return result;
+        _logger.LogInformation("OAuth login succesfuld med {Provider} for bruger: {Email}", dto.Provider, user.Email);
+        return await GenerateAuthResponse(user);
     }
 
     /// <summary>

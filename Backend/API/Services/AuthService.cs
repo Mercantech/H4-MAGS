@@ -12,24 +12,25 @@ public interface IAuthService
     Task<User?> LoginAsync(string usernameOrEmail, string password);
     Task<bool> VerifyPasswordAsync(string password, string passwordHash);
     string HashPassword(string password);
-    Task<User?> LoginWithGoogleAsync(string idToken);
-    Task<User?> LoginWithGoogleAccessTokenAsync(string accessToken);
+    
+    /// <summary>
+    /// Tilføj password til en eksisterende SSO-only bruger (account linking).
+    /// Gør det muligt for brugeren at logge ind med både SSO og password.
+    /// </summary>
+    Task<bool> AddPasswordToUserAsync(int userId, string password);
 }
 
 public class AuthService : IAuthService
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<AuthService> _logger;
-    private readonly IGoogleAuthService _googleAuthService;
 
     public AuthService(
         ApplicationDbContext context, 
-        ILogger<AuthService> logger,
-        IGoogleAuthService googleAuthService)
+        ILogger<AuthService> logger)
     {
         _context = context;
         _logger = logger;
-        _googleAuthService = googleAuthService;
     }
 
     public async Task<User?> RegisterAsync(string username, string email, string password, UserRole role)
@@ -73,6 +74,14 @@ public class AuthService : IAuthService
             return null;
         }
 
+        // BEST PRACTICE: Tjek om brugeren har et password
+        // SSO-only brugere kan ikke logge ind med password
+        if (string.IsNullOrEmpty(user.PasswordHash))
+        {
+            _logger.LogWarning("Bruger {Email} forsøger at logge ind med password, men har kun SSO", user.Email);
+            return null;
+        }
+
         if (!await VerifyPasswordAsync(password, user.PasswordHash))
         {
             return null;
@@ -85,8 +94,14 @@ public class AuthService : IAuthService
         return user;
     }
 
-    public Task<bool> VerifyPasswordAsync(string password, string passwordHash)
+    public Task<bool> VerifyPasswordAsync(string password, string? passwordHash)
     {
+        // BEST PRACTICE: Tjek om password hash eksisterer
+        if (string.IsNullOrEmpty(passwordHash))
+        {
+            return Task.FromResult(false);
+        }
+
         // PBKDF2 med HMAC-SHA256
         var parts = passwordHash.Split(':', 3);
         if (parts.Length != 3)
@@ -116,23 +131,27 @@ public class AuthService : IAuthService
         return $"{iterations}:{Convert.ToBase64String(salt)}:{hash}";
     }
 
-    public async Task<User?> LoginWithGoogleAsync(string idToken)
+    /// <summary>
+    /// Tilføj password til en eksisterende SSO-only bruger (account linking).
+    /// Gør det muligt for brugeren at logge ind med både SSO og password.
+    /// </summary>
+    public async Task<bool> AddPasswordToUserAsync(int userId, string password)
     {
-        // Verificer Google token
-        var payload = await _googleAuthService.VerifyGoogleTokenAsync(idToken);
-        if (payload == null)
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
         {
-            return null;
+            return false;
         }
 
-        // Hent eller opret bruger
-        return await _googleAuthService.GetOrCreateUserFromGoogleAsync(payload);
-    }
+        // Hvis brugeren allerede har et password, opdater det
+        // Dette gør det muligt at ændre password også
+        user.PasswordHash = HashPassword(password);
+        user.UpdatedAt = DateTime.UtcNow;
 
-    public async Task<User?> LoginWithGoogleAccessTokenAsync(string accessToken)
-    {
-        // Hent eller opret bruger fra access_token
-        return await _googleAuthService.GetOrCreateUserFromAccessTokenAsync(accessToken);
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Password tilføjet/opdateret for bruger ID: {UserId}", userId);
+        
+        return true;
     }
 }
 

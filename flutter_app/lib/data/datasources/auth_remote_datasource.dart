@@ -1,5 +1,5 @@
 import '../models/auth/auth_response_model.dart';
-import '../models/auth/google_login_request.dart';
+import '../models/auth/oauth_login_request.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_result.dart';
 
@@ -12,27 +12,22 @@ class AuthRemoteDataSource {
   AuthRemoteDataSource({required ApiClient apiClient})
       : _apiClient = apiClient;
 
-  /// Login med Google ID token
+  /// Generisk OAuth login - Virker med alle providers (Google, Microsoft, GitHub, etc.)
   /// 
-  /// Sender Google ID token til backend og modtager JWT token.
-  Future<ApiResult<AuthResponseModel>> loginWithGoogle(String idToken) async {
-    final request = GoogleLoginRequest(idToken: idToken);
+  /// Bruger det nye generiske /oauth-login endpoint.
+  /// Anbefalet metode til OAuth login.
+  Future<ApiResult<AuthResponseModel>> loginWithOAuth({
+    required String provider,
+    required String accessToken,
+  }) async {
+    final request = OAuthLoginRequest(
+      provider: provider,
+      accessToken: accessToken,
+    );
     
     return await _apiClient.post<AuthResponseModel>(
-      '/auth/google-login', // Fjernet /api da apiBaseUrl allerede indeholder det
+      '/auth/oauth-login',
       body: request.toJson(),
-      fromJson: (json) => AuthResponseModel.fromJson(json as Map<String, dynamic>),
-    );
-  }
-
-  /// Login med Google access token (workaround for Flutter Web)
-  /// 
-  /// Bruges når idToken ikke er tilgængelig, men access_token er.
-  /// Backend henter brugerinfo direkte fra Google API.
-  Future<ApiResult<AuthResponseModel>> loginWithGoogleAccessToken(String accessToken) async {
-    return await _apiClient.post<AuthResponseModel>(
-      '/auth/google-login-access-token', // Fjernet /api da apiBaseUrl allerede indeholder det
-      body: {'accessToken': accessToken},
       fromJson: (json) => AuthResponseModel.fromJson(json as Map<String, dynamic>),
     );
   }

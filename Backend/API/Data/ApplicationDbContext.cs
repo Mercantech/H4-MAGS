@@ -12,6 +12,7 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<User> Users { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<ExternalIdentity> ExternalIdentities { get; set; }
     public DbSet<Quiz> Quizzes { get; set; }
     public DbSet<Question> Questions { get; set; }
     public DbSet<Answer> Answers { get; set; }
@@ -51,9 +52,36 @@ public class ApplicationDbContext : DbContext
                       v => v.ToLowerInvariant(),
                       v => v.ToLowerInvariant());
             
-            entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.PasswordHash).HasMaxLength(500); // Nullable - SSO-only brugere har ikke password
             entity.Property(e => e.Role).IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired();
+        });
+
+        // Configure ExternalIdentity entity
+        modelBuilder.Entity<ExternalIdentity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            
+            // Composite unique index: En bruger kan kun have én identitet pr. provider
+            entity.HasIndex(e => new { e.UserId, e.Provider })
+                  .IsUnique()
+                  .HasDatabaseName("IX_ExternalIdentities_UserId_Provider");
+            
+            // Index på ProviderUserId for hurtig lookup
+            entity.HasIndex(e => new { e.Provider, e.ProviderUserId })
+                  .IsUnique()
+                  .HasDatabaseName("IX_ExternalIdentities_Provider_ProviderUserId");
+            
+            entity.Property(e => e.Provider).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ProviderUserId).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.ProviderEmail).HasMaxLength(255);
+            entity.Property(e => e.CreatedAt).IsRequired();
+
+            // Configure relationship with User
+            entity.HasOne(e => e.User)
+                  .WithMany(u => u.ExternalIdentities)
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Configure RefreshToken entity

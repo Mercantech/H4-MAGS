@@ -26,16 +26,19 @@ class AuthRepositoryImpl {
           hostedDomain: null, // Tillad alle domæner
         );
 
-  /// Login med Google
+  /// Login med Google via generisk OAuth løsning
   /// 
-  /// Workaround for Flutter Web idToken problem:
+  /// Bruger den nye generiske OAuth endpoint som virker perfekt med access tokens.
+  /// Flow:
   /// 1. Prøver signInSilently() først (virker hvis bruger allerede er logget ind)
-  /// 2. Hvis det fejler, logger vi ud og bruger signIn() med requestScopes()
-  /// 3. requestScopes() tvinger en ny consent prompt, hvilket kan give idToken
-  /// 4. Henter ID token fra Google
-  /// 5. Sender ID token til backend
+  /// 2. Hvis det fejler, logger vi ud og bruger signIn()
+  /// 3. Henter access token fra Google (det vi får på Flutter Web)
+  /// 4. Sender access token til generisk /oauth-login endpoint med provider="Google"
   /// 
-  /// Note: Dette er en workaround. Den bedste løsning er at migrere til renderButton()
+  /// Den generiske løsning håndterer automatisk:
+  /// - Hentning af brugerinfo fra Google API
+  /// - Account linking til eksisterende konti
+  /// - Oprettelse af nye brugere
   Future<ApiResult<AuthResponseModel>> loginWithGoogle() async {
     try {
       GoogleSignInAccount? googleUser;
@@ -64,61 +67,22 @@ class AuthRepositoryImpl {
       // Hent authentication details
       GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
-      // DEBUG: Log hvad vi får fra Google
-      print('🔍 [DEBUG] Google Auth Details:');
-      print('   - Has idToken: ${googleAuth.idToken != null}');
-      print('   - Has accessToken: ${googleAuth.accessToken != null}');
-      if (googleAuth.idToken != null) {
-        print('   - idToken length: ${googleAuth.idToken!.length}');
-        print('   - idToken preview: ${googleAuth.idToken!.substring(0, 50)}...');
-      }
-      if (googleAuth.accessToken != null) {
-        print('   - accessToken length: ${googleAuth.accessToken!.length}');
-        print('   - accessToken preview: ${googleAuth.accessToken!.substring(0, 50)}...');
-      }
-
-      // WORKAROUND: På Flutter Web får vi ofte kun access_token, ikke idToken
-      // Vi bruger access_token til at hente brugerinfo fra Google API på backend
-      if (googleAuth.idToken != null) {
-        // Hvis vi har idToken, brug det (bedste løsning)
-        print('✅ [DEBUG] Bruger idToken til login');
-        return await _remoteDataSource.loginWithGoogle(googleAuth.idToken!);
-      } else if (googleAuth.accessToken != null) {
-        // Hvis vi kun har access_token, brug det til alternativt endpoint
-        print('⚠️ [DEBUG] idToken mangler, bruger access_token i stedet');
-        print('📤 [DEBUG] Sender access_token til backend...');
-        final result = await _remoteDataSource.loginWithGoogleAccessToken(googleAuth.accessToken!);
-        print('📥 [DEBUG] Modtog svar fra backend: ${result.isSuccess ? "SUCCESS" : "FAILURE"}');
-        if (result.isFailure) {
-          print('❌ [DEBUG] Fejl: ${result.exceptionOrNull?.message}');
-        }
-        return result;
-      } else {
-        // Hvis vi ikke har nogen token, prøv at hente det igen
-        print('⏳ [DEBUG] Ingen token fundet, venter og prøver igen...');
-        await Future.delayed(const Duration(milliseconds: 1000));
-        googleAuth = await googleUser.authentication;
-        
-        print('🔍 [DEBUG] Efter retry:');
-        print('   - Has idToken: ${googleAuth.idToken != null}');
-        print('   - Has accessToken: ${googleAuth.accessToken != null}');
-        
-        if (googleAuth.idToken != null) {
-          print('✅ [DEBUG] Fandt idToken efter retry');
-          return await _remoteDataSource.loginWithGoogle(googleAuth.idToken!);
-        } else if (googleAuth.accessToken != null) {
-          print('⚠️ [DEBUG] Fandt access_token efter retry');
-          return await _remoteDataSource.loginWithGoogleAccessToken(googleAuth.accessToken!);
-        }
-        
-        print('❌ [DEBUG] Ingen token fundet efter retry');
+      // Brug generisk OAuth endpoint med access token
+      // På Flutter Web får vi altid access_token, som er det primære flow
+      if (googleAuth.accessToken == null) {
         return ApiResult.failure(
           ApiException.unknown(
-            'Kunne ikke hente token fra Google. '
+            'Kunne ikke hente access token fra Google. '
             'Prøv at logge ud og ind igen.'
           ),
         );
       }
+
+      // Brug generisk OAuth endpoint - virker perfekt med access token
+      return await _remoteDataSource.loginWithOAuth(
+        provider: 'Google',
+        accessToken: googleAuth.accessToken!,
+      );
     } catch (e) {
       if (e is ApiException) {
         return ApiResult.failure(e);
