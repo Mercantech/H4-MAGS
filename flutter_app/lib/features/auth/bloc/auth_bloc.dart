@@ -196,21 +196,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       return;
     }
 
+    // Gem authenticated state før vi starter opdatering
+    final authenticatedState = state as AuthAuthenticated;
+
     final result = await _authRepository.updatePassword(event.newPassword);
 
     if (result.isSuccess) {
       // Password opdateret succesfuldt - behold authenticated state
       // Vi behøver ikke at opdatere state, da password opdatering ikke ændrer authentication
-      final currentState = state as AuthAuthenticated;
-      emit(currentState); // Re-emit samme state for at triggere UI update
+      if (!emit.isDone) {
+        emit(authenticatedState); // Re-emit samme state for at triggere UI update
+      }
     } else {
       final error = result.exceptionOrNull!;
-      emit(AuthError(error.userMessage));
-      // Gå tilbage til authenticated state efter fejl
-      final currentState = state as AuthAuthenticated;
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (!emit.isDone) {
-          emit(currentState);
+      // Emit error først
+      if (!emit.isDone) {
+        emit(AuthError(error.userMessage));
+      }
+      // Gå tilbage til authenticated state efter kort delay
+      Future.delayed(const Duration(milliseconds: 2000), () {
+        if (!emit.isDone && state is AuthError) {
+          emit(authenticatedState);
         }
       });
     }

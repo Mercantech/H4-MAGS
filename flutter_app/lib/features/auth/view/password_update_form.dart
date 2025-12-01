@@ -36,61 +36,57 @@ class _PasswordUpdateFormState extends State<PasswordUpdateForm> {
       return;
     }
 
+    if (!mounted) return;
+
     setState(() {
       _isUpdating = true;
     });
 
     // Dispatch event til AuthBloc
+    // BlocListener vil håndtere state changes og vise feedback
     context.read<AuthBloc>().add(
       UpdatePasswordEvent(_passwordController.text),
     );
-
-    // Vent lidt for at se resultatet
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    // Tjek om der er en fejl i state
-    final currentState = context.read<AuthBloc>().state;
-    if (currentState is AuthError) {
-      // Vis fejl i snackbar
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(currentState.message),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } else {
-      // Success - vis bekræftelse og nulstil form
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password opdateret succesfuldt!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        _passwordController.clear();
-        _confirmPasswordController.clear();
-      }
-    }
-
-    if (mounted) {
-      setState(() {
-        _isUpdating = false;
-      });
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthError && _isUpdating) {
+          // Vis fejl i snackbar
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() {
+            _isUpdating = false;
+          });
+        } else if (state is AuthAuthenticated && _isUpdating) {
+          // Success - vis bekræftelse og nulstil form
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Password opdateret succesfuldt!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          _passwordController.clear();
+          _confirmPasswordController.clear();
+          setState(() {
+            _isUpdating = false;
+          });
+        }
+      },
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               const Text(
                 'Opdater Password',
                 style: TextStyle(
@@ -182,6 +178,7 @@ class _PasswordUpdateFormState extends State<PasswordUpdateForm> {
                 ),
               ),
             ],
+            ),
           ),
         ),
       ),

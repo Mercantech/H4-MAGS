@@ -111,6 +111,9 @@ class AuthInterceptor extends Interceptor {
     if (token != null && token.isNotEmpty) {
       // Tilføj Bearer token til Authorization header
       options.headers['Authorization'] = 'Bearer $token';
+      print('🔑 [DEBUG] Token tilføjet til request: ${options.path}');
+    } else {
+      print('⚠️ [DEBUG] Ingen token fundet for request: ${options.path}');
     }
     
     super.onRequest(options, handler);
