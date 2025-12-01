@@ -1,5 +1,6 @@
 using API.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace API.Data;
 
@@ -218,5 +219,61 @@ public class ApplicationDbContext : DbContext
                   .HasForeignKey(e => e.AnswerId)
                   .OnDelete(DeleteBehavior.Restrict); // Ikke slet svar hvis der er deltager svar
         });
+    }
+
+    /// <summary>
+    /// Override SaveChangesAsync for at automatisk opdatere UpdatedAt for alle BaseEntity entiteter
+    /// </summary>
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        var entries = ChangeTracker.Entries()
+            .Where(e => e.Entity is BaseEntity && (e.State == EntityState.Added || e.State == EntityState.Modified));
+
+        foreach (var entry in entries)
+        {
+            var entity = (BaseEntity)entry.Entity;
+            
+            if (entry.State == EntityState.Added)
+            {
+                // Sæt CreatedAt hvis det ikke allerede er sat
+                if (entity.CreatedAt == default)
+                {
+                    entity.CreatedAt = DateTime.UtcNow.AddHours(2);
+                }
+            }
+            
+            // Opdater UpdatedAt for både nye og modificerede entiteter
+            entity.UpdatedAt = DateTime.UtcNow;
+        }
+
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Override SaveChanges for at automatisk opdatere UpdatedAt for alle BaseEntity entiteter
+    /// </summary>
+    public override int SaveChanges()
+    {
+        var entries = ChangeTracker.Entries()
+            .Where(e => e.Entity is BaseEntity && (e.State == EntityState.Added || e.State == EntityState.Modified));
+
+        foreach (var entry in entries)
+        {
+            var entity = (BaseEntity)entry.Entity;
+            
+            if (entry.State == EntityState.Added)
+            {
+                // Sæt CreatedAt hvis det ikke allerede er sat
+                if (entity.CreatedAt == default)
+                {
+                    entity.CreatedAt = DateTime.UtcNow.AddHours(2);
+                }
+            }
+            
+            // Opdater UpdatedAt for både nye og modificerede entiteter
+            entity.UpdatedAt = DateTime.UtcNow;
+        }
+
+        return base.SaveChanges();
     }
 }

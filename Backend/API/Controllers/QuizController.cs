@@ -196,7 +196,6 @@ public class QuizController : ControllerBase
             quiz.Description = updateDto.Description;
         }
 
-        quiz.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
         return NoContent();
@@ -241,7 +240,6 @@ public class QuizController : ControllerBase
 
         quiz.Status = QuizStatus.Active;
         quiz.StartedAt = DateTime.UtcNow;
-        quiz.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
 
@@ -263,7 +261,6 @@ public class QuizController : ControllerBase
 
         quiz.Status = QuizStatus.Finished;
         quiz.FinishedAt = DateTime.UtcNow;
-        quiz.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
 

@@ -146,7 +146,6 @@ public class AuthService : IAuthService
         // Hvis brugeren allerede har et password, opdater det
         // Dette gør det muligt at ændre password også
         user.PasswordHash = HashPassword(password);
-        user.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
         _logger.LogInformation("Password tilføjet/opdateret for bruger ID: {UserId}", userId);

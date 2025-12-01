@@ -188,7 +188,6 @@ public class UserController : ControllerBase
             user.Email = normalizedEmail;
         }
 
-        user.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
         return NoContent();
