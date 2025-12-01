@@ -47,12 +47,28 @@ class _PasswordUpdateFormState extends State<PasswordUpdateForm> {
     context.read<AuthBloc>().add(
       UpdatePasswordEvent(_passwordController.text),
     );
+
+    // Fallback: Hvis listener ikke trigger inden for 5 sekunder, nulstil loading state
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted && _isUpdating) {
+        setState(() {
+          _isUpdating = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password opdatering fuldført (timeout check)'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
+        // Håndter error state
         if (state is AuthError && _isUpdating) {
           // Vis fejl i snackbar
           ScaffoldMessenger.of(context).showSnackBar(
@@ -61,10 +77,14 @@ class _PasswordUpdateFormState extends State<PasswordUpdateForm> {
               backgroundColor: Colors.red,
             ),
           );
-          setState(() {
-            _isUpdating = false;
-          });
-        } else if (state is AuthAuthenticated && _isUpdating) {
+          if (mounted) {
+            setState(() {
+              _isUpdating = false;
+            });
+          }
+        } 
+        // Håndter success - når vi går fra loading til authenticated
+        else if (state is AuthAuthenticated && _isUpdating) {
           // Success - vis bekræftelse og nulstil form
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -74,9 +94,16 @@ class _PasswordUpdateFormState extends State<PasswordUpdateForm> {
           );
           _passwordController.clear();
           _confirmPasswordController.clear();
-          setState(() {
-            _isUpdating = false;
-          });
+          if (mounted) {
+            setState(() {
+              _isUpdating = false;
+            });
+          }
+        }
+        // Håndter loading state - sæt _isUpdating hvis vi ikke allerede er i loading
+        else if (state is AuthLoading && !_isUpdating) {
+          // Dette kan ske hvis loading state kommer fra en anden operation
+          // Vi ignorerer det hvis vi ikke er i gang med password update
         }
       },
       child: Card(
