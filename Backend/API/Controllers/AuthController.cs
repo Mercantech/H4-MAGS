@@ -281,8 +281,9 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "Authorization code mangler" });
         }
 
-        // Hent redirect URI (skal matche GitHub OAuth App konfiguration)
-        var redirectUri = $"{Request.Scheme}://{Request.Host}/api/auth/github/callback";
+        // Hent redirect URI (skal matche GitHub OAuth App konfiguration PRÆCIST - case-sensitive!)
+        // Controller route er "api/[controller]" hvor [controller] = "Auth" (stort A)
+        var redirectUri = $"{Request.Scheme}://{Request.Host}/api/Auth/github/callback";
         _logger.LogInformation("GitHub OAuth callback modtaget. Code: {Code}, RedirectUri: {RedirectUri}", 
             code.Substring(0, Math.Min(20, code.Length)) + "...", redirectUri);
 

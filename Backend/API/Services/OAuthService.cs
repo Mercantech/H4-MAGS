@@ -448,6 +448,8 @@ public class OAuthService : IOAuthService
         try
         {
             _logger.LogInformation("Exchanging GitHub authorization code for access token...");
+            _logger.LogInformation("GitHub token exchange - Code: {Code}, RedirectUri: {RedirectUri}, ClientId: {ClientId}", 
+                code?.Substring(0, Math.Min(20, code?.Length ?? 0)) + "...", redirectUri, githubConfig.ClientId);
             
             using var httpClient = new HttpClient();
             var requestBody = new Dictionary<string, string>
