@@ -10,7 +10,7 @@ namespace API.Services;
 
 public interface IJwtService
 {
-    string GenerateToken(User user, string? provider = null);
+    string GenerateToken(User user, string? authProvider = null);
     string GenerateRefreshToken();
     ClaimsPrincipal? GetPrincipalFromToken(string token);
 }
@@ -26,31 +26,34 @@ public class JwtService : IJwtService
         _logger = logger;
     }
 
-    public string GenerateToken(User user, string? provider = null)
+    public string GenerateToken(User user, string? authProvider = null)
     {
         var secretKey = _configuration.GetConfigValue("Jwt:SecretKey", "Jwt__SecretKey") 
             ?? throw new InvalidOperationException("JWT SecretKey er ikke konfigureret");
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        // Sæt auth_provider claim baseret på login metode
+        // OldSchool for normal login, Google/GitHub for OAuth login
+        var provider = authProvider switch
+        {
+            "Google" => "Google",
+            "GitHub" => "GitHub",
+            _ => "OldSchool" // Normal email/password login
+        };
+
+        var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.Role, user.Role.ToString()),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim("auth_provider", provider) // Custom claim for login metode
         };
 
-        // Sæt issuer baseret på login metode
-        // H4-MAGS-API for normal login, Google/GitHub for OAuth login
-        var issuer = provider switch
-        {
-            "Google" => "Google",
-            "GitHub" => "GitHub",
-            _ => _configuration.GetConfigValue("Jwt:Issuer", "Jwt__Issuer") ?? "H4-MAGS-API"
-        };
-        
+        // Issuer er altid H4-MAGS-API (ikke baseret på login metode)
+        var issuer = _configuration.GetConfigValue("Jwt:Issuer", "Jwt__Issuer") ?? "H4-MAGS-API";
         var audience = _configuration.GetConfigValue("Jwt:Audience", "Jwt__Audience") ?? "H4-MAGS-Client";
         var expirationMinutes = int.Parse(_configuration.GetConfigValue("Jwt:ExpirationMinutes", "Jwt__ExpirationMinutes") ?? "60");
 
@@ -82,15 +85,8 @@ public class JwtService : IJwtService
             var secretKey = _configuration.GetConfigValue("Jwt:SecretKey", "Jwt__SecretKey") 
                 ?? throw new InvalidOperationException("JWT SecretKey er ikke konfigureret");
             
-            // Accepter alle mulige issuers (H4-MAGS-API, Google, GitHub)
-            var validIssuers = new[] 
-            { 
-                _configuration.GetConfigValue("Jwt:Issuer", "Jwt__Issuer") ?? "H4-MAGS-API",
-                "H4-MAGS-API",
-                "Google",
-                "GitHub"
-            };
-            
+            // Issuer er altid H4-MAGS-API
+            var issuer = _configuration.GetConfigValue("Jwt:Issuer", "Jwt__Issuer") ?? "H4-MAGS-API";
             var audience = _configuration.GetConfigValue("Jwt:Audience", "Jwt__Audience") ?? "H4-MAGS-Client";
 
             var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
@@ -98,7 +94,7 @@ public class JwtService : IJwtService
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
                 ValidateIssuer = true,
-                ValidIssuers = validIssuers, // Accepter alle mulige issuers
+                ValidIssuer = issuer, // Altid H4-MAGS-API
                 ValidateAudience = true,
                 ValidAudience = audience,
                 ValidateLifetime = false, // Vi validerer kun strukturen, ikke udløbstid

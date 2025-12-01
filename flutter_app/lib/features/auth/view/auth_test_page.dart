@@ -461,7 +461,7 @@ class _AuthTestContent extends StatelessWidget {
       'Email': payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'],
       'Role': payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'],
       'JWT ID': payload['jti'],
-      'Issuer': payload['iss'],
+      'Auth Provider': payload['auth_provider'] ?? 'OldSchool',
       'Audience': payload['aud'],
       'Expires': payload['exp'] != null 
           ? DateTime.fromMillisecondsSinceEpoch((payload['exp'] as int) * 1000)

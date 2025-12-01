@@ -55,7 +55,7 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "Brugernavn eller email er allerede i brug" });
         }
 
-        var token = _jwtService.GenerateToken(user, null); // Normal login - H4-MAGS-API
+        var token = _jwtService.GenerateToken(user, null); // Normal login - OldSchool
         var refreshToken = _jwtService.GenerateRefreshToken();
 
         // Gem refresh token i database
@@ -104,7 +104,7 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Forkert brugernavn eller password" });
         }
 
-        var token = _jwtService.GenerateToken(user, null); // Normal login - H4-MAGS-API
+        var token = _jwtService.GenerateToken(user, null); // Normal login - OldSchool
         var refreshToken = _jwtService.GenerateRefreshToken();
 
         // Gem refresh token i database
@@ -155,8 +155,8 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Ugyldig eller udløbet refresh token" });
         }
 
-        // Generer nye tokens
-        var newToken = _jwtService.GenerateToken(refreshToken.User);
+        // Generer nye tokens (beholder samme auth_provider som original token)
+        var newToken = _jwtService.GenerateToken(refreshToken.User, null);
         var newRefreshToken = _jwtService.GenerateRefreshToken();
 
         // Revoke gamle refresh token
