@@ -238,7 +238,7 @@ public class ApplicationDbContext : DbContext
                 // Sæt CreatedAt hvis det ikke allerede er sat
                 if (entity.CreatedAt == default)
                 {
-                    entity.CreatedAt = DateTime.UtcNow.AddHours(2);
+                    entity.CreatedAt = DateTime.UtcNow;
                 }
             }
             
@@ -266,7 +266,7 @@ public class ApplicationDbContext : DbContext
                 // Sæt CreatedAt hvis det ikke allerede er sat
                 if (entity.CreatedAt == default)
                 {
-                    entity.CreatedAt = DateTime.UtcNow.AddHours(2);
+                    entity.CreatedAt = DateTime.UtcNow;
                 }
             }
             
