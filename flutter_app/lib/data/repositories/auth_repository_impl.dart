@@ -151,9 +151,9 @@ class AuthRepositoryImpl {
       final state = DateTime.now().millisecondsSinceEpoch.toString();
       
       // Byg GitHub OAuth URL
-      final callbackUrl = GitHubConfig.getCallbackUrl(
-        AppConfig.instance.apiBaseUrl.replaceAll('/api', ''),
-      );
+      // Fjern /api fra apiBaseUrl for at få base URL (f.eks. https://kahoot-api.mercantec.tech)
+      final baseUrl = AppConfig.instance.apiBaseUrl.replaceAll('/api', '');
+      final callbackUrl = GitHubConfig.getCallbackUrl(baseUrl);
       final scopes = GitHubConfig.scopes.join(' ');
       final authUrl = '${GitHubConfig.authorizationUrl}'
           '?client_id=${GitHubConfig.clientId}'
@@ -162,7 +162,10 @@ class AuthRepositoryImpl {
           '&state=$state';
 
       print('🔍 [DEBUG] Åbner GitHub OAuth popup...');
+      print('📍 [DEBUG] API Base URL: ${AppConfig.instance.apiBaseUrl}');
+      print('📍 [DEBUG] Base URL (efter /api fjernet): $baseUrl');
       print('📍 [DEBUG] Callback URL: $callbackUrl');
+      print('📍 [DEBUG] Full Auth URL: $authUrl');
       
       // Åbn popup window (Flutter Web)
       final popup = html.window.open(
