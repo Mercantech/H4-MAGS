@@ -16,9 +16,10 @@ class GitHubConfig {
   
   /// Backend callback URL
   /// 
-  /// Denne URL skal matche GitHub OAuth App callback URL konfiguration
+  /// Denne URL skal matche GitHub OAuth App callback URL konfiguration PRÆCIST
+  /// Bemærk: Casing er vigtigt - skal være /api/Auth/ for at matche controller route
   static String getCallbackUrl(String baseUrl) {
-    return '$baseUrl/api/auth/github/callback';
+    return '$baseUrl/api/Auth/github/callback';
   }
 }
 
