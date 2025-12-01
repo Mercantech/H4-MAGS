@@ -20,6 +20,20 @@ class LoginWithGitHubEvent extends AuthEvent {
   const LoginWithGitHubEvent();
 }
 
+/// Standard login med username/email og password
+class LoginEvent extends AuthEvent {
+  final String usernameOrEmail;
+  final String password;
+
+  const LoginEvent({
+    required this.usernameOrEmail,
+    required this.password,
+  });
+
+  @override
+  List<Object?> get props => [usernameOrEmail, password];
+}
+
 /// Logout
 class LogoutEvent extends AuthEvent {
   const LogoutEvent();

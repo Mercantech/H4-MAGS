@@ -19,7 +19,12 @@ class AuthInitial extends AuthState {
 
 /// Loading state - authentication i gang
 class AuthLoading extends AuthState {
-  const AuthLoading();
+  final String? loginMethod;
+
+  const AuthLoading({this.loginMethod});
+
+  @override
+  List<Object?> get props => [loginMethod];
 }
 
 /// Authenticated state - bruger er logget ind

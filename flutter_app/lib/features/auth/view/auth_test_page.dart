@@ -78,6 +78,25 @@ class _AuthTestContent extends StatelessWidget {
               // Action Buttons
               if (state is! AuthLoading) ...[
                 if (state is AuthUnauthenticated || state is AuthInitial) ...[
+                  _buildStandardLoginForm(context),
+                  const SizedBox(height: 16),
+                  const Row(
+                    children: [
+                      Expanded(child: Divider()),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'ELLER',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   _buildGoogleLoginButton(context),
                   const SizedBox(height: 12),
                   _buildGitHubLoginButton(context),
@@ -122,7 +141,9 @@ class _AuthTestContent extends StatelessWidget {
       backgroundColor = Colors.blue[100]!;
       icon = Icons.hourglass_empty;
       title = 'Loading...';
-      subtitle = 'Logger ind med Google...';
+      subtitle = state.loginMethod != null 
+          ? 'Logger ind med ${state.loginMethod}...'
+          : 'Logger ind...';
     } else if (state is AuthAuthenticated) {
       backgroundColor = Colors.green[100]!;
       icon = Icons.check_circle;
@@ -184,6 +205,10 @@ class _AuthTestContent extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildStandardLoginForm(BuildContext context) {
+    return _StandardLoginForm();
   }
 
   Widget _buildGoogleLoginButton(BuildContext context) {
@@ -670,6 +695,160 @@ class _GoogleSignInButtonWidgetState extends State<_GoogleSignInButtonWidget> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 2,
+      ),
+    );
+  }
+}
+
+/// Standard Login Form Widget
+/// 
+/// Giver mulighed for at logge ind med username/email og password.
+class _StandardLoginForm extends StatefulWidget {
+  const _StandardLoginForm();
+
+  @override
+  State<_StandardLoginForm> createState() => _StandardLoginFormState();
+}
+
+class _StandardLoginFormState extends State<_StandardLoginForm> {
+  final _formKey = GlobalKey<FormState>();
+  final _usernameOrEmailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _usernameOrEmailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Dispatch event til AuthBloc
+    context.read<AuthBloc>().add(
+      LoginEvent(
+        usernameOrEmail: _usernameOrEmailController.text.trim(),
+        password: _passwordController.text,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthError && _isLoading) {
+          // Vis fejl i snackbar
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+        } else if (state is AuthAuthenticated && _isLoading) {
+          // Success - nulstil form
+          _usernameOrEmailController.clear();
+          _passwordController.clear();
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      },
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Login',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _usernameOrEmailController,
+                  decoration: const InputDecoration(
+                    labelText: 'Username eller Email',
+                    hintText: 'Indtast dit brugernavn eller email',
+                    prefixIcon: Icon(Icons.person),
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Username eller email er påkrævet';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    hintText: 'Indtast dit password',
+                    prefixIcon: const Icon(Icons.lock),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
+                    border: const OutlineInputBorder(),
+                  ),
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _handleLogin(),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Password er påkrævet';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _handleLogin,
+                  icon: _isLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.login),
+                  label: Text(_isLoading ? 'Logger ind...' : 'Login'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -10,7 +10,7 @@ namespace API.Services;
 
 public interface IJwtService
 {
-    string GenerateToken(User user);
+    string GenerateToken(User user, string? provider = null);
     string GenerateRefreshToken();
     ClaimsPrincipal? GetPrincipalFromToken(string token);
 }
@@ -26,7 +26,7 @@ public class JwtService : IJwtService
         _logger = logger;
     }
 
-    public string GenerateToken(User user)
+    public string GenerateToken(User user, string? provider = null)
     {
         var secretKey = _configuration.GetConfigValue("Jwt:SecretKey", "Jwt__SecretKey") 
             ?? throw new InvalidOperationException("JWT SecretKey er ikke konfigureret");
@@ -42,7 +42,15 @@ public class JwtService : IJwtService
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-        var issuer = _configuration.GetConfigValue("Jwt:Issuer", "Jwt__Issuer") ?? "H4-MAGS-API";
+        // Sæt issuer baseret på login metode
+        // H4-MAGS-API for normal login, Google/GitHub for OAuth login
+        var issuer = provider switch
+        {
+            "Google" => "Google",
+            "GitHub" => "GitHub",
+            _ => _configuration.GetConfigValue("Jwt:Issuer", "Jwt__Issuer") ?? "H4-MAGS-API"
+        };
+        
         var audience = _configuration.GetConfigValue("Jwt:Audience", "Jwt__Audience") ?? "H4-MAGS-Client";
         var expirationMinutes = int.Parse(_configuration.GetConfigValue("Jwt:ExpirationMinutes", "Jwt__ExpirationMinutes") ?? "60");
 
@@ -73,7 +81,16 @@ public class JwtService : IJwtService
         {
             var secretKey = _configuration.GetConfigValue("Jwt:SecretKey", "Jwt__SecretKey") 
                 ?? throw new InvalidOperationException("JWT SecretKey er ikke konfigureret");
-            var issuer = _configuration.GetConfigValue("Jwt:Issuer", "Jwt__Issuer") ?? "H4-MAGS-API";
+            
+            // Accepter alle mulige issuers (H4-MAGS-API, Google, GitHub)
+            var validIssuers = new[] 
+            { 
+                _configuration.GetConfigValue("Jwt:Issuer", "Jwt__Issuer") ?? "H4-MAGS-API",
+                "H4-MAGS-API",
+                "Google",
+                "GitHub"
+            };
+            
             var audience = _configuration.GetConfigValue("Jwt:Audience", "Jwt__Audience") ?? "H4-MAGS-Client";
 
             var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
@@ -81,7 +98,7 @@ public class JwtService : IJwtService
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
                 ValidateIssuer = true,
-                ValidIssuer = issuer,
+                ValidIssuers = validIssuers, // Accepter alle mulige issuers
                 ValidateAudience = true,
                 ValidAudience = audience,
                 ValidateLifetime = false, // Vi validerer kun strukturen, ikke udløbstid

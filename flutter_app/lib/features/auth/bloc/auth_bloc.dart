@@ -20,6 +20,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         super(const AuthInitial()) {
     on<LoginWithGoogleEvent>(_onLoginWithGoogle);
     on<LoginWithGitHubEvent>(_onLoginWithGitHub);
+    on<LoginEvent>(_onLogin);
     on<LogoutEvent>(_onLogout);
     on<CheckAuthStatusEvent>(_onCheckAuthStatus);
     on<UpdatePasswordEvent>(_onUpdatePassword);
@@ -30,9 +31,48 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     LoginWithGoogleEvent event,
     Emitter<AuthState> emit,
   ) async {
-    emit(const AuthLoading());
+    emit(const AuthLoading(loginMethod: 'Google'));
 
     final result = await _authRepository.loginWithGoogle();
+
+    // Håndter resultatet eksplicit i stedet for at bruge when() med async callbacks
+    if (result.isSuccess) {
+      final authResponse = result.dataOrNull!;
+      
+      // Gem tokens i secure storage FØR vi emitter state
+      try {
+        await _authStorage.saveAuthResponse(authResponse);
+      } catch (e) {
+        // Hvis gemning fejler, log fejl men fortsæt
+        print('⚠️ [DEBUG] Kunne ikke gemme tokens: $e');
+      }
+      
+      // Tjek om emitter stadig er aktiv før vi emitter
+      if (!emit.isDone) {
+        emit(AuthAuthenticated(
+          authResponse: authResponse,
+          user: authResponse.user,
+        ));
+      }
+    } else {
+      final error = result.exceptionOrNull!;
+      if (!emit.isDone) {
+        emit(AuthError(error.userMessage));
+      }
+    }
+  }
+
+  /// Standard login med username/email og password
+  Future<void> _onLogin(
+    LoginEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading(loginMethod: 'Email/Password'));
+
+    final result = await _authRepository.login(
+      usernameOrEmail: event.usernameOrEmail,
+      password: event.password,
+    );
 
     // Håndter resultatet eksplicit i stedet for at bruge when() med async callbacks
     if (result.isSuccess) {
@@ -66,7 +106,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     LoginWithGitHubEvent event,
     Emitter<AuthState> emit,
   ) async {
-    emit(const AuthLoading());
+    emit(const AuthLoading(loginMethod: 'GitHub'));
 
     final result = await _authRepository.loginWithGitHub();
 
@@ -102,7 +142,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     LogoutEvent event,
     Emitter<AuthState> emit,
   ) async {
-    emit(const AuthLoading());
+    emit(const AuthLoading(loginMethod: null)); // Ingen login metode ved logout
     
     // Hvis vi har en refresh token, prøv at revoke den på backend
     if (state is AuthAuthenticated) {
@@ -129,7 +169,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     CheckAuthStatusEvent event,
     Emitter<AuthState> emit,
   ) async {
-    emit(const AuthLoading());
+    emit(const AuthLoading(loginMethod: null)); // Ingen specifik login metode ved check
     
     try {
       // Tjek om token eksisterer og er gyldig

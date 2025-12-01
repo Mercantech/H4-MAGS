@@ -55,7 +55,7 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "Brugernavn eller email er allerede i brug" });
         }
 
-        var token = _jwtService.GenerateToken(user);
+        var token = _jwtService.GenerateToken(user, null); // Normal login - H4-MAGS-API
         var refreshToken = _jwtService.GenerateRefreshToken();
 
         // Gem refresh token i database
@@ -104,7 +104,7 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Forkert brugernavn eller password" });
         }
 
-        var token = _jwtService.GenerateToken(user);
+        var token = _jwtService.GenerateToken(user, null); // Normal login - H4-MAGS-API
         var refreshToken = _jwtService.GenerateRefreshToken();
 
         // Gem refresh token i database
@@ -252,7 +252,7 @@ public class AuthController : ControllerBase
         }
 
         _logger.LogInformation("OAuth login succesfuld med {Provider} for bruger: {Email}", dto.Provider, user.Email);
-        return await GenerateAuthResponse(user);
+        return await GenerateAuthResponse(user, dto.Provider);
     }
 
     /// <summary>
@@ -329,7 +329,7 @@ public class AuthController : ControllerBase
         _logger.LogInformation("GitHub OAuth login succesfuld for bruger: {Email}", user.Email);
         
         // Generer auth response direkte (uden at wrappe i ActionResult)
-        var token = _jwtService.GenerateToken(user);
+        var token = _jwtService.GenerateToken(user, "GitHub");
         var refreshToken = _jwtService.GenerateRefreshToken();
 
         // Gem refresh token i database
@@ -425,9 +425,9 @@ public class AuthController : ControllerBase
     /// <summary>
     /// Helper metode til at generere auth response
     /// </summary>
-    private async Task<ActionResult<AuthResponseDto>> GenerateAuthResponse(User user)
+    private async Task<ActionResult<AuthResponseDto>> GenerateAuthResponse(User user, string? provider = null)
     {
-        var token = _jwtService.GenerateToken(user);
+        var token = _jwtService.GenerateToken(user, provider);
         var refreshToken = _jwtService.GenerateRefreshToken();
 
         // Gem refresh token i database

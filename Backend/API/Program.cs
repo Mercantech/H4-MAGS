@@ -51,13 +51,22 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    // Accepter alle mulige issuers (H4-MAGS-API, Google, GitHub)
+    var validIssuers = new[] 
+    { 
+        jwtIssuer,
+        "H4-MAGS-API",
+        "Google",
+        "GitHub"
+    };
+    
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtIssuer,
+        ValidIssuers = validIssuers, // Accepter alle mulige issuers
         ValidAudience = jwtAudience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
         ClockSkew = TimeSpan.Zero
