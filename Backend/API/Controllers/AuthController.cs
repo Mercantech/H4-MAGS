@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/auth")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
@@ -282,8 +282,8 @@ public class AuthController : ControllerBase
         }
 
         // Hent redirect URI (skal matche GitHub OAuth App konfiguration PRÆCIST - case-sensitive!)
-        // Controller route er "api/[controller]" hvor [controller] = "Auth" (stort A)
-        var redirectUri = $"{Request.Scheme}://{Request.Host}/api/Auth/github/callback";
+        // Controller route er "api/auth" (lowercase for konsistens)
+        var redirectUri = $"{Request.Scheme}://{Request.Host}/api/auth/github/callback";
         _logger.LogInformation("GitHub OAuth callback modtaget. Code: {Code}, RedirectUri: {RedirectUri}", 
             code.Substring(0, Math.Min(20, code.Length)) + "...", redirectUri);
 
