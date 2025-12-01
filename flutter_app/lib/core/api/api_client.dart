@@ -42,7 +42,8 @@ class ApiClient {
         baseUrl: config.apiBaseUrl,
         connectTimeout: Duration(milliseconds: config.apiTimeout),
         receiveTimeout: Duration(milliseconds: config.apiTimeout),
-        sendTimeout: Duration(milliseconds: config.apiTimeout),
+        // sendTimeout fjernet for Flutter Web kompatibilitet
+        // Web adapter kan ikke bruge sendTimeout uden request body
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -128,21 +129,50 @@ class ApiClient {
     required T Function(dynamic json) fromJson,
   }) async {
     try {
+      // DEBUG: Log request
+      print('📤 [DEBUG] POST Request til: $path');
+      print('📤 [DEBUG] Body type: ${body.runtimeType}');
+      if (body is Map) {
+        final bodyMap = body as Map;
+        print('📤 [DEBUG] Body keys: ${bodyMap.keys.toList()}');
+        // Log body values, men mask sensitive data
+        for (var key in bodyMap.keys) {
+          var value = bodyMap[key];
+          if (key.toString().toLowerCase().contains('token') || 
+              key.toString().toLowerCase().contains('password')) {
+            print('📤 [DEBUG]   $key: ${value?.toString().length ?? 0} characters (masked)');
+          } else {
+            print('📤 [DEBUG]   $key: $value');
+          }
+        }
+      }
+      
       final response = await _dio.post(
         path,
         data: body,
         queryParameters: queryParameters,
       );
 
+      print('📥 [DEBUG] Response status: ${response.statusCode}');
+      print('📥 [DEBUG] Response data type: ${response.data.runtimeType}');
+
       if (_isSuccessStatusCode(response.statusCode)) {
         final data = fromJson(response.data);
+        print('✅ [DEBUG] Request successful, parsed data: ${data.runtimeType}');
         return ApiResult.success(data);
       } else {
+        print('❌ [DEBUG] Request failed with status: ${response.statusCode}');
+        print('❌ [DEBUG] Response data: ${response.data}');
         return ApiResult.failure(_mapError(response));
       }
     } on DioException catch (e) {
+      print('❌ [DEBUG] DioException: ${e.type}');
+      print('❌ [DEBUG] Message: ${e.message}');
+      print('❌ [DEBUG] Response: ${e.response?.data}');
+      print('❌ [DEBUG] Status code: ${e.response?.statusCode}');
       return ApiResult.failure(_mapDioException(e));
     } catch (e) {
+      print('❌ [DEBUG] Unknown exception: $e');
       return ApiResult.failure(
         ApiException.unknown('Uventet fejl: $e'),
       );

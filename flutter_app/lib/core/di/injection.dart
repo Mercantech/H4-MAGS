@@ -1,9 +1,14 @@
 import 'package:get_it/get_it.dart';
 import '../../data/datasources/weather_remote_datasource.dart';
+import '../../data/datasources/auth_remote_datasource.dart';
 import '../../data/repositories/weather_repository_impl.dart';
+import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/repositories/weather_repository.dart';
 import '../../features/weather/bloc/weather_bloc.dart';
+import '../../features/auth/bloc/auth_bloc.dart';
 import '../api/api_client.dart';
+import '../config/google_config.dart';
+import '../storage/auth_storage.dart';
 
 /// Dependency Injection Container
 /// 
@@ -37,13 +42,27 @@ final getIt = GetIt.instance;
 /// 
 /// Kaldes fra main.dart før app starter.
 Future<void> setupDependencyInjection() async {
-  // ============================================================
-  // Core - API Client
-  // ============================================================
-  // Singleton fordi vi kun vil have én API client instance
-  getIt.registerLazySingleton<ApiClient>(
-    () => ApiClient(),
-  );
+        // ============================================================
+        // Core - Storage
+        // ============================================================
+        // Singleton fordi vi kun vil have én storage instance
+        getIt.registerLazySingleton<AuthStorage>(
+          () => AuthStorage(),
+        );
+
+        // ============================================================
+        // Core - API Client
+        // ============================================================
+        // Singleton fordi vi kun vil have én API client instance
+        // Tilføj AuthInterceptor der henter token fra storage
+        getIt.registerLazySingleton<ApiClient>(
+          () {
+            final apiClient = ApiClient();
+            // Tilføj auth interceptor der henter token fra secure storage
+            apiClient.addAuthInterceptor(() => getIt<AuthStorage>().getToken());
+            return apiClient;
+          },
+        );
 
   // ============================================================
   // Data Sources
@@ -51,6 +70,12 @@ Future<void> setupDependencyInjection() async {
   // Remote data sources
   getIt.registerLazySingleton<WeatherRemoteDataSource>(
     () => WeatherRemoteDataSourceImpl(
+      apiClient: getIt<ApiClient>(),
+    ),
+  );
+
+  getIt.registerLazySingleton<AuthRemoteDataSource>(
+    () => AuthRemoteDataSource(
       apiClient: getIt<ApiClient>(),
     ),
   );
@@ -72,6 +97,13 @@ Future<void> setupDependencyInjection() async {
     ),
   );
 
+  getIt.registerLazySingleton<AuthRepositoryImpl>(
+    () => AuthRepositoryImpl(
+      remoteDataSource: getIt<AuthRemoteDataSource>(),
+      webClientId: GoogleConfig.webClientId,
+    ),
+  );
+
   // TODO: Tilføj flere repositories her efterhånden:
   // getIt.registerLazySingleton<UserRepository>(
   //   () => UserRepositoryImpl(
@@ -90,12 +122,12 @@ Future<void> setupDependencyInjection() async {
     ),
   );
 
-  // TODO: Tilføj flere BLoCs her efterhånden:
-  // getIt.registerFactory<LoginBloc>(
-  //   () => LoginBloc(
-  //     authRepository: getIt<AuthRepository>(),
-  //   ),
-  // );
+        getIt.registerFactory<AuthBloc>(
+          () => AuthBloc(
+            authRepository: getIt<AuthRepositoryImpl>(),
+            authStorage: getIt<AuthStorage>(),
+          ),
+        );
 }
 
 /// Reset dependency injection

@@ -83,9 +83,10 @@ class Environment {
 
   /// Development environment (localhost)
   /// Brug når du udvikler lokalt og API kører på din maskine
+  /// 
   static const development = Environment._(
     name: 'development',
-    apiBaseUrl: 'http://localhost:5000/api',
+    apiBaseUrl: 'https://localhost:7258/api', 
     apiTimeout: 30000, // 30 sekunder
     enableApiLogging: true,
     enableErrorLogging: true,
