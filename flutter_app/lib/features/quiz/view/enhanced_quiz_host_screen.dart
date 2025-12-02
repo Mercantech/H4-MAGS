@@ -42,16 +42,32 @@ class _EnhancedQuizHostScreenState extends State<EnhancedQuizHostScreen> {
   DateTime? _questionStartTime;
   Timer? _pollTimer;
   Timer? _timeTimer;
+  bool _isCreatingSession = false; // Guard for at forhindre flere session oprettelser
 
   @override
   void initState() {
     super.initState();
     _session = widget.initialSession;
-    if (_session == null) {
+    if (_session == null && !_isCreatingSession) {
+      _isCreatingSession = true;
+      // Brug en enkelt postFrameCallback for at undgå flere kald
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.read<QuizBloc>().add(CreateSessionEvent(quizId: widget.quiz.id));
+        if (mounted && _session == null && _isCreatingSession) {
+          // Tjek om der allerede er en session i BLoC state
+          final currentState = context.read<QuizBloc>().state;
+          if (currentState is! SessionCreated) {
+            context.read<QuizBloc>().add(CreateSessionEvent(quizId: widget.quiz.id));
+          } else {
+            // Der er allerede en session - brug den
+            setState(() {
+              _session = currentState.session;
+              _isCreatingSession = false;
+            });
+            _startPolling();
+          }
+        }
       });
-    } else {
+    } else if (_session != null) {
       _startPolling();
     }
   }
@@ -215,33 +231,42 @@ class _EnhancedQuizHostScreenState extends State<EnhancedQuizHostScreen> {
       body: BlocListener<QuizBloc, QuizState>(
         listener: (context, state) {
           if (state is SessionCreated) {
-            setState(() {
-              _session = state.session;
-            });
-            _startPolling();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Session oprettet! PIN: ${state.session.sessionPin}'),
-                backgroundColor: Colors.green,
-                duration: const Duration(seconds: 5),
-              ),
-            );
+            // Tjek om det er for denne quiz og vi ikke allerede har en session
+            if (mounted && state.session.quizId == widget.quiz.id && _session == null) {
+              setState(() {
+                _session = state.session;
+                _isCreatingSession = false; // Reset flag
+              });
+              _startPolling();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Session oprettet! PIN: ${state.session.sessionPin}'),
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 5),
+                ),
+              );
+            }
           } else if (state is SessionStarted) {
             _refreshData();
             _startPolling(); // Restart polling med højere frekvens
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Quiz er startet!'),
-                backgroundColor: Colors.green,
-              ),
-            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Quiz er startet!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
           } else if (state is QuizError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
+            _isCreatingSession = false; // Reset flag ved fejl
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           }
         },
         child: _session == null

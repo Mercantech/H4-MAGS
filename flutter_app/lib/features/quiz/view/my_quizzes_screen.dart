@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/quiz_bloc.dart';
 import '../bloc/quiz_event.dart';
 import '../bloc/quiz_state.dart';
+import '../../../data/models/quiz/session_model.dart';
 import '../../../core/di/injection.dart';
 import '../../../data/repositories/quiz_repository_impl.dart';
 import 'quiz_host_screen.dart';
@@ -18,6 +19,9 @@ class MyQuizzesScreen extends StatefulWidget {
 }
 
 class _MyQuizzesScreenState extends State<MyQuizzesScreen> {
+  bool _isCreatingSession = false; // Guard for at forhindre flere session oprettelser
+  SessionModel? _createdSession; // Gem oprettet session
+
   @override
   void initState() {
     super.initState();
@@ -38,10 +42,17 @@ class _MyQuizzesScreenState extends State<MyQuizzesScreen> {
       body: BlocListener<QuizBloc, QuizState>(
         listener: (context, state) {
           if (state is SessionCreated) {
-            // Session oprettet - naviger til host screen
-            // Vi skal hente quiz info først
-            _navigateToHostScreen(state.session.quizId);
+            // Session oprettet - gem den og naviger til host screen
+            if (!_isCreatingSession || _createdSession == null) {
+              setState(() {
+                _createdSession = state.session;
+                _isCreatingSession = false; // Reset flag
+              });
+              _navigateToHostScreen(state.session.quizId, state.session);
+            }
           } else if (state is QuizError) {
+            _isCreatingSession = false; // Reset flag ved fejl
+            _createdSession = null;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -152,12 +163,17 @@ class _MyQuizzesScreenState extends State<MyQuizzesScreen> {
                       ),
                       trailing: IconButton(
                         icon: const Icon(Icons.play_arrow),
-                        onPressed: () {
-                          // Opret ny session med denne quiz
-                          context.read<QuizBloc>().add(
-                                CreateSessionEvent(quizId: quiz.id),
-                              );
-                        },
+                        onPressed: _isCreatingSession
+                            ? null
+                            : () {
+                                // Opret ny session med denne quiz
+                                setState(() {
+                                  _isCreatingSession = true;
+                                });
+                                context.read<QuizBloc>().add(
+                                      CreateSessionEvent(quizId: quiz.id),
+                                    );
+                              },
                         tooltip: 'Start session',
                       ),
                     ),
@@ -202,7 +218,7 @@ class _MyQuizzesScreenState extends State<MyQuizzesScreen> {
     );
   }
 
-  Future<void> _navigateToHostScreen(int quizId) async {
+  Future<void> _navigateToHostScreen(int quizId, SessionModel? session) async {
     // Hent quiz info først
     final repository = getIt<QuizRepositoryImpl>();
     final quizResult = await repository.getQuizById(quizId);
@@ -210,13 +226,28 @@ class _MyQuizzesScreenState extends State<MyQuizzesScreen> {
     if (quizResult.isSuccess && mounted) {
       final quiz = quizResult.dataOrNull!;
       
-      // Naviger til host screen - den opretter automatisk session
+      // Naviger til host screen med den oprettede session
+      // Dette forhindrer at host screen opretter en ny session
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => QuizHostScreen(quiz: quiz),
+          builder: (context) => QuizHostScreen(
+            quiz: quiz,
+            initialSession: session, // Pass session så host screen ikke opretter en ny
+          ),
         ),
       );
+      
+      // Reset efter navigation
+      setState(() {
+        _createdSession = null;
+      });
+    } else {
+      // Reset flag ved fejl
+      setState(() {
+        _isCreatingSession = false;
+        _createdSession = null;
+      });
     }
   }
 

@@ -54,21 +54,26 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
         listener: (context, state) {
           if (state is QuizCreated) {
             // Quiz oprettet - naviger til host screen
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => QuizHostScreen(
-                  quiz: state.quiz,
+            // Host screen vil automatisk oprette session
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuizHostScreen(
+                    quiz: state.quiz,
+                  ),
                 ),
-              ),
-            );
+              );
+            }
           } else if (state is QuizError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           }
         },
         child: SingleChildScrollView(
