@@ -1,11 +1,14 @@
 import 'package:get_it/get_it.dart';
 import '../../data/datasources/weather_remote_datasource.dart';
 import '../../data/datasources/auth_remote_datasource.dart';
+import '../../data/datasources/quiz_remote_datasource.dart';
 import '../../data/repositories/weather_repository_impl.dart';
 import '../../data/repositories/auth_repository_impl.dart';
+import '../../data/repositories/quiz_repository_impl.dart';
 import '../../domain/repositories/weather_repository.dart';
 import '../../features/weather/bloc/weather_bloc.dart';
 import '../../features/auth/bloc/auth_bloc.dart';
+import '../../features/quiz/bloc/quiz_bloc.dart';
 import '../api/api_client.dart';
 import '../config/google_config.dart';
 import '../storage/auth_storage.dart';
@@ -80,6 +83,12 @@ Future<void> setupDependencyInjection() async {
     ),
   );
 
+  getIt.registerLazySingleton<QuizRemoteDataSource>(
+    () => QuizRemoteDataSource(
+      apiClient: getIt<ApiClient>(),
+    ),
+  );
+
   // TODO: Tilføj local data source her når I implementerer caching
   // getIt.registerLazySingleton<WeatherLocalDataSource>(
   //   () => WeatherLocalDataSourceImpl(),
@@ -101,6 +110,12 @@ Future<void> setupDependencyInjection() async {
     () => AuthRepositoryImpl(
       remoteDataSource: getIt<AuthRemoteDataSource>(),
       webClientId: GoogleConfig.webClientId,
+    ),
+  );
+
+  getIt.registerLazySingleton<QuizRepositoryImpl>(
+    () => QuizRepositoryImpl(
+      remoteDataSource: getIt<QuizRemoteDataSource>(),
     ),
   );
 
@@ -128,6 +143,12 @@ Future<void> setupDependencyInjection() async {
             authStorage: getIt<AuthStorage>(),
           ),
         );
+
+  getIt.registerFactory<QuizBloc>(
+    () => QuizBloc(
+      quizRepository: getIt<QuizRepositoryImpl>(),
+    ),
+  );
 }
 
 /// Reset dependency injection

@@ -10,6 +10,8 @@ import 'features/auth/view/auth_test_page.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/bloc/auth_event.dart';
 import 'features/auth/bloc/auth_state.dart';
+import 'features/quiz/bloc/quiz_bloc.dart';
+import 'features/quiz/view/quiz_entry_screen.dart';
 import 'core/theme/theme.dart';
 
 /// Main entry point
@@ -81,12 +83,17 @@ class MyApp extends StatelessWidget {
             return authBloc;
           },
         ),
+
+        // Quiz BLoC - injected via DI
+        BlocProvider(
+          create: (context) => getIt<QuizBloc>(),
+        ),
       ],
       child: MaterialApp(
-        title: 'H4 Vejr App',
+        title: 'H4 Kahoot Quiz',
         theme: appTheme,
         debugShowCheckedModeBanner: false,
-        home: const MainNavigation(),
+        home: const QuizEntryScreen(),
       ),
     );
   }
