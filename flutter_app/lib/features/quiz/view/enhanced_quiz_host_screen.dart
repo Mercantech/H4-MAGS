@@ -127,27 +127,7 @@ class _EnhancedQuizHostScreenState extends State<EnhancedQuizHostScreen> {
   }
 
   Future<void> _updateCurrentQuestion() async {
-    if (_session == null || _session!.startedAt == null) return;
-    
-    // Find nuværende spørgsmål baseret på hvor lang tid der er gået siden quiz startede
-    final elapsed = DateTime.now().difference(_session!.startedAt!);
-    int totalSeconds = 0;
-    int questionIndex = -1;
-    
-    // Find hvilket spørgsmål vi er ved baseret på akkumuleret tid
-    for (int i = 0; i < widget.quiz.questions.length; i++) {
-      final question = widget.quiz.questions[i];
-      final questionEndTime = totalSeconds + question.timeLimitSeconds;
-      
-      if (elapsed.inSeconds >= totalSeconds && elapsed.inSeconds < questionEndTime) {
-        questionIndex = i;
-        break;
-      }
-      totalSeconds = questionEndTime;
-    }
-    
-    // Hvis vi har passeret alle spørgsmål
-    if (questionIndex < 0 || questionIndex >= widget.quiz.questions.length) {
+    if (_session == null || _session!.status != 'InProgress') {
       if (mounted) {
         setState(() {
           _currentQuestion = null;
@@ -157,29 +137,45 @@ class _EnhancedQuizHostScreenState extends State<EnhancedQuizHostScreen> {
       return;
     }
     
+    // Brug sessionens currentQuestionOrderIndex (centralt styret)
+    if (_session!.currentQuestionOrderIndex == null) {
+      // Ingen aktivt spørgsmål
+      if (mounted) {
+        setState(() {
+          _currentQuestion = null;
+          _timeRemaining = 0;
+        });
+      }
+      return;
+    }
+    
+    final currentOrderIndex = _session!.currentQuestionOrderIndex!;
+    
     // Hvis det er et nyt spørgsmål, hent det
-    if (_currentQuestionIndex != questionIndex) {
-      _currentQuestionIndex = questionIndex;
+    if (_currentQuestion == null || _currentQuestion!.orderIndex != currentOrderIndex) {
       final repository = getIt<QuizRepositoryImpl>();
-      final questionResult = await repository.getQuestion(
+      final questionResult = await repository.getCurrentQuestion(
         sessionId: _session!.id,
-        questionOrderIndex: questionIndex + 1,
       );
       
       if (questionResult.isSuccess && mounted) {
         final question = questionResult.dataOrNull!;
-        // Beregn start tid for dette spørgsmål
-        int questionStartSeconds = 0;
-        for (int i = 0; i < questionIndex; i++) {
-          questionStartSeconds += widget.quiz.questions[i].timeLimitSeconds;
-        }
         
         setState(() {
           _currentQuestion = question;
-          _questionStartTime = _session!.startedAt!.add(Duration(seconds: questionStartSeconds));
+          _currentQuestionIndex = currentOrderIndex - 1; // Convert to 0-based index
+          _questionStartTime = DateTime.now(); // Start timer nu
           _timeRemaining = question.timeLimitSeconds;
         });
         _startTimeTimer();
+      } else {
+        // Spørgsmål ikke fundet - måske quiz færdig
+        if (mounted) {
+          setState(() {
+            _currentQuestion = null;
+            _timeRemaining = 0;
+          });
+        }
       }
     } else if (_currentQuestion != null && _questionStartTime != null) {
       // Opdater tid tilbage for nuværende spørgsmål
@@ -210,13 +206,8 @@ class _EnhancedQuizHostScreenState extends State<EnhancedQuizHostScreen> {
         });
       }
       
-      if (remaining <= 0) {
-        timer.cancel();
-        // Spørgsmål er færdig - vent på næste
-        Future.delayed(const Duration(seconds: 2), () {
-          _updateCurrentQuestion();
-        });
-      }
+      // Serveren bestemmer når vi går videre - vi opdaterer bare tiden
+      // Polling i _refreshData() vil opdage når serveren går videre
     });
   }
 

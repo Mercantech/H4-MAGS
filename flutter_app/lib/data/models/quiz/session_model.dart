@@ -11,6 +11,7 @@ class SessionModel {
   final int quizId;
   final String quizTitle;
   final int participantCount;
+  final int? currentQuestionOrderIndex; // Nuværende spørgsmål alle deltagere skal se
 
   SessionModel({
     required this.id,
@@ -22,6 +23,7 @@ class SessionModel {
     required this.quizId,
     required this.quizTitle,
     required this.participantCount,
+    this.currentQuestionOrderIndex,
   });
 
   factory SessionModel.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@ class SessionModel {
       quizId: json['quizId'] as int,
       quizTitle: json['quizTitle'] as String,
       participantCount: json['participantCount'] as int,
+      currentQuestionOrderIndex: json['currentQuestionOrderIndex'] as int?,
     );
   }
 
@@ -53,6 +56,7 @@ class SessionModel {
       'quizId': quizId,
       'quizTitle': quizTitle,
       'participantCount': participantCount,
+      if (currentQuestionOrderIndex != null) 'currentQuestionOrderIndex': currentQuestionOrderIndex,
     };
   }
 }

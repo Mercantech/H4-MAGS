@@ -25,33 +25,76 @@ class QuizParticipationScreen extends StatefulWidget {
 }
 
 class _QuizParticipationScreenState extends State<QuizParticipationScreen> {
-  int _currentQuestionIndex = 0;
   QuestionModel? _currentQuestion;
   int? _selectedAnswerId;
   Timer? _timer;
+  Timer? _pollTimer;
   int _timeRemaining = 0;
   bool _hasAnswered = false;
   DateTime? _questionStartTime;
   int _participantTotalPoints = 0;
+  SessionModel? _currentSession;
+  int? _lastQuestionOrderIndex; // Track hvilket spørgsmål vi sidst så
 
   @override
   void initState() {
     super.initState();
     _participantTotalPoints = widget.participant.totalPoints;
-    _loadQuestion(1); // Start med første spørgsmål
+    _currentSession = widget.session;
+    _lastQuestionOrderIndex = widget.session.currentQuestionOrderIndex;
+    
+    // Hvis der allerede er et aktivt spørgsmål, load det med det samme
+    if (widget.session.currentQuestionOrderIndex != null) {
+      _loadCurrentQuestion();
+    }
+    
+    _startPolling(); // Start polling for nuværende spørgsmål
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _pollTimer?.cancel();
     super.dispose();
   }
 
-  Future<void> _loadQuestion(int questionOrderIndex) async {
+  void _startPolling() {
+    // Poll hver sekund for at tjekke om der er et nyt spørgsmål
+    _pollTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      if (!mounted) return;
+
+      final repository = getIt<QuizRepositoryImpl>();
+      
+      // Hent opdateret session
+      final sessionResult = await repository.getSessionByPin(widget.session.sessionPin);
+      if (sessionResult.isSuccess) {
+        final updatedSession = sessionResult.dataOrNull!;
+        
+        setState(() {
+          _currentSession = updatedSession;
+        });
+
+        // Tjek om session er færdig
+        if (updatedSession.status == 'Completed') {
+          timer.cancel();
+          _showResults();
+          return;
+        }
+
+        // Tjek om der er et nyt spørgsmål
+        if (updatedSession.currentQuestionOrderIndex != null &&
+            updatedSession.currentQuestionOrderIndex != _lastQuestionOrderIndex) {
+          _lastQuestionOrderIndex = updatedSession.currentQuestionOrderIndex;
+          await _loadCurrentQuestion();
+        }
+      }
+    });
+  }
+
+  Future<void> _loadCurrentQuestion() async {
     final repository = getIt<QuizRepositoryImpl>();
-    final result = await repository.getQuestion(
+    final result = await repository.getCurrentQuestion(
       sessionId: widget.session.id,
-      questionOrderIndex: questionOrderIndex,
     );
 
     if (result.isSuccess) {
@@ -64,11 +107,13 @@ class _QuizParticipationScreenState extends State<QuizParticipationScreen> {
       });
       _startTimer();
     } else {
-      // Hvis spørgsmål ikke findes, er quiz færdig
+      // Hvis spørgsmål ikke findes, kan det være at quiz er færdig eller venter
       final error = result.exceptionOrNull;
       if (error != null && error.statusCode == 404) {
-        // Quiz færdig - vis resultat
-        _showResults();
+        // Ingen aktivt spørgsmål - vent på næste
+        setState(() {
+          _currentQuestion = null;
+        });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -145,17 +190,12 @@ class _QuizParticipationScreenState extends State<QuizParticipationScreen> {
         ),
       );
 
-      // Vent lidt før næste spørgsmål
-      await Future.delayed(const Duration(seconds: 2));
-
       // Opdater total points
       setState(() {
         _participantTotalPoints = data['totalPoints'] as int? ?? _participantTotalPoints;
       });
 
-      // Load næste spørgsmål
-      _currentQuestionIndex++;
-      _loadQuestion(_currentQuestionIndex + 1);
+      // Vent på at serveren går videre til næste spørgsmål (polling håndterer det)
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -199,9 +239,7 @@ class _QuizParticipationScreenState extends State<QuizParticipationScreen> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
       ),
-      body: _currentQuestion == null
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
+      body: Column(
               children: [
                 // Timer og Points
                 Container(
@@ -234,7 +272,7 @@ class _QuizParticipationScreenState extends State<QuizParticipationScreen> {
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                           Text(
-                            '${widget.participant.totalPoints}',
+                            '$_participantTotalPoints',
                             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -247,28 +285,44 @@ class _QuizParticipationScreenState extends State<QuizParticipationScreen> {
 
                 // Question
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          'Spørgsmål ${_currentQuestionIndex + 1}',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Colors.grey[600],
+                  child: _currentQuestion == null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const CircularProgressIndicator(),
+                              const SizedBox(height: 16),
+                              Text(
+                                _currentSession?.status == 'Completed'
+                                    ? 'Quiz færdig!'
+                                    : 'Venter på næste spørgsmål...',
+                                style: Theme.of(context).textTheme.titleLarge,
                               ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _currentQuestion!.text,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
+                            ],
+                          ),
+                        )
+                      : SingleChildScrollView(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                'Spørgsmål ${_currentQuestion!.orderIndex}',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      color: Colors.grey[600],
+                                    ),
                               ),
-                        ),
-                        const SizedBox(height: 32),
+                              const SizedBox(height: 16),
+                              Text(
+                                _currentQuestion!.text,
+                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              const SizedBox(height: 32),
 
-                        // Answers
-                        ..._currentQuestion!.answers.asMap().entries.map((entry) {
+                              // Answers
+                              ..._currentQuestion!.answers.asMap().entries.map((entry) {
                           final answer = entry.value;
                           final index = entry.key;
                           final isSelected = _selectedAnswerId == answer.id;

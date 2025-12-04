@@ -13,6 +13,8 @@ public class QuizSession : BaseEntity
     public QuizSessionStatus Status { get; set; } = QuizSessionStatus.Waiting;
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
+    public int? CurrentQuestionOrderIndex { get; set; } // Nuværende spørgsmål alle deltagere skal se (null = ingen aktivt spørgsmål)
+    public DateTime? CurrentQuestionStartedAt { get; set; } // Hvornår det nuværende spørgsmål startede (for timeout håndtering)
 
     // Foreign key
     public int QuizId { get; set; }

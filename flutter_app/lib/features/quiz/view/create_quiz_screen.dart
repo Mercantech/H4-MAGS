@@ -10,7 +10,7 @@ import 'quiz_host_screen.dart';
 
 /// Create Quiz Screen
 /// 
-/// Simpel MVP til at oprette en quiz med 1 spørgsmål og 4 svar.
+/// Tillader oprettelse af en quiz med flere spørgsmål.
 class CreateQuizScreen extends StatefulWidget {
   const CreateQuizScreen({super.key});
 
@@ -18,65 +18,122 @@ class CreateQuizScreen extends StatefulWidget {
   State<CreateQuizScreen> createState() => _CreateQuizScreenState();
 }
 
+class _QuestionData {
+  final TextEditingController questionController;
+  final List<TextEditingController> answerControllers;
+  int correctAnswerIndex;
+  int timeLimitSeconds;
+  int points;
+
+  _QuestionData()
+      : questionController = TextEditingController(),
+        answerControllers = List.generate(4, (_) => TextEditingController()),
+        correctAnswerIndex = 0,
+        timeLimitSeconds = 30,
+        points = 1000;
+
+  void dispose() {
+    questionController.dispose();
+    for (var controller in answerControllers) {
+      controller.dispose();
+    }
+  }
+}
+
 class _CreateQuizScreenState extends State<CreateQuizScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _questionController = TextEditingController();
-  final List<TextEditingController> _answerControllers = [
-    TextEditingController(),
-    TextEditingController(),
-    TextEditingController(),
-    TextEditingController(),
-  ];
-  int _correctAnswerIndex = 0;
+  final List<_QuestionData> _questions = [_QuestionData()]; // Start med 1 spørgsmål
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _questionController.dispose();
-    for (var controller in _answerControllers) {
-      controller.dispose();
+    for (var question in _questions) {
+      question.dispose();
     }
     super.dispose();
   }
 
+  void _addQuestion() {
+    setState(() {
+      _questions.add(_QuestionData());
+    });
+  }
+
+  void _removeQuestion(int index) {
+    if (_questions.length > 1) {
+      setState(() {
+        _questions[index].dispose();
+        _questions.removeAt(index);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Opret Quiz'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-      ),
-      body: BlocListener<QuizBloc, QuizState>(
-        listener: (context, state) {
-          if (state is QuizCreated) {
-            // Quiz oprettet - naviger til host screen
-            // Host screen vil automatisk oprette session
+    // Tjek om bruger er logget ind - hvis ikke, redirect tilbage
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        if (authState is! AuthAuthenticated) {
+          // Bruger er ikke logget ind - redirect tilbage
+          WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuizHostScreen(
-                    quiz: state.quiz,
-                  ),
-                ),
-              );
-            }
-          } else if (state is QuizError) {
-            if (mounted) {
+              Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
+                const SnackBar(
+                  content: Text('Du skal være logget ind for at oprette en quiz'),
                   backgroundColor: Colors.red,
                 ),
               );
             }
-          }
-        },
-        child: SingleChildScrollView(
+          });
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Opret Quiz'),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Colors.white,
+            ),
+            body: const Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Opret Quiz'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            foregroundColor: Colors.white,
+          ),
+          body: BlocListener<QuizBloc, QuizState>(
+            listener: (context, state) {
+              if (state is QuizCreated) {
+                // Quiz oprettet - naviger til host screen
+                // Host screen vil automatisk oprette session
+                if (mounted) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => QuizHostScreen(
+                        quiz: state.quiz,
+                      ),
+                    ),
+                  );
+                }
+              } else if (state is QuizError) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
@@ -118,75 +175,132 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Question
-                Text(
-                  'Spørgsmål',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _questionController,
-                  decoration: InputDecoration(
-                    labelText: 'Spørgsmålstekst *',
-                    hintText: 'F.eks. "Hvad er Flutter?"',
-                    prefixIcon: const Icon(Icons.help_outline),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                // Questions Section
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Spørgsmål',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
-                  ),
-                  maxLines: 2,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Indtast et spørgsmål';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                // Answers
-                Text(
-                  'Svar (vælg det korrekte svar)',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle),
+                      onPressed: _addQuestion,
+                      tooltip: 'Tilføj spørgsmål',
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
-                ...List.generate(4, (index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Row(
-                      children: [
-                        Radio<int>(
-                          value: index,
-                          groupValue: _correctAnswerIndex,
-                          onChanged: (value) {
-                            setState(() {
-                              _correctAnswerIndex = value!;
-                            });
-                          },
-                        ),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _answerControllers[index],
+
+                // List of Questions
+                ...List.generate(_questions.length, (questionIndex) {
+                  final questionData = _questions[questionIndex];
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 24),
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Question Header
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Spørgsmål ${questionIndex + 1}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              if (_questions.length > 1)
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: () => _removeQuestion(questionIndex),
+                                  tooltip: 'Fjern spørgsmål',
+                                  color: Colors.red,
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Question Text
+                          TextFormField(
+                            controller: questionData.questionController,
                             decoration: InputDecoration(
-                              labelText: 'Svar ${index + 1} *',
-                              hintText: 'Indtast svar mulighed',
+                              labelText: 'Spørgsmålstekst *',
+                              hintText: 'F.eks. "Hvad er Flutter?"',
+                              prefixIcon: const Icon(Icons.help_outline),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
+                            maxLines: 2,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'Indtast et svar';
+                                return 'Indtast et spørgsmål';
                               }
                               return null;
                             },
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 16),
+
+                          // Answers
+                          Text(
+                            'Svar (vælg det korrekte svar)',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 12),
+                          ...List.generate(4, (answerIndex) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Row(
+                                children: [
+                                  Radio<int>(
+                                    value: answerIndex,
+                                    groupValue: questionData.correctAnswerIndex,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        questionData.correctAnswerIndex = value!;
+                                      });
+                                    },
+                                  ),
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller:
+                                          questionData.answerControllers[answerIndex],
+                                      decoration: InputDecoration(
+                                        labelText: 'Svar ${answerIndex + 1} *',
+                                        hintText: 'Indtast svar mulighed',
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Indtast et svar';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
                     ),
                   );
                 }),
@@ -221,7 +335,9 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
             ),
           ),
         ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -242,24 +358,29 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
       return;
     }
 
-    // Opret quiz model
-    final answers = _answerControllers
-        .asMap()
-        .entries
-        .map((entry) => CreateAnswerModel(
-              text: entry.value.text.trim(),
-              isCorrect: entry.key == _correctAnswerIndex,
-              orderIndex: entry.key + 1,
-            ))
-        .toList();
+    // Opret quiz model med alle spørgsmål
+    final questions = _questions.asMap().entries.map((entry) {
+      final questionIndex = entry.key;
+      final questionData = entry.value;
 
-    final question = CreateQuestionModel(
-      text: _questionController.text.trim(),
-      timeLimitSeconds: 30,
-      points: 1000,
-      orderIndex: 1,
-      answers: answers,
-    );
+      final answers = questionData.answerControllers
+          .asMap()
+          .entries
+          .map((answerEntry) => CreateAnswerModel(
+                text: answerEntry.value.text.trim(),
+                isCorrect: answerEntry.key == questionData.correctAnswerIndex,
+                orderIndex: answerEntry.key + 1,
+              ))
+          .toList();
+
+      return CreateQuestionModel(
+        text: questionData.questionController.text.trim(),
+        timeLimitSeconds: questionData.timeLimitSeconds,
+        points: questionData.points,
+        orderIndex: questionIndex + 1,
+        answers: answers,
+      );
+    }).toList();
 
     final quiz = CreateQuizModel(
       title: _titleController.text.trim(),
@@ -267,7 +388,7 @@ class _CreateQuizScreenState extends State<CreateQuizScreen> {
           ? null
           : _descriptionController.text.trim(),
       userId: authState.user.id,
-      questions: [question],
+      questions: questions,
     );
 
     // Dispatch event

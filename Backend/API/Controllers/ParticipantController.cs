@@ -59,6 +59,13 @@ public class ParticipantController : ControllerBase
             return BadRequest("Spørgsmål tilhører ikke quizzen i denne session");
         }
 
+        // Valider at spørgsmålet matcher sessionens nuværende spørgsmål (centralt styret)
+        if (!participant.QuizSession.CurrentQuestionOrderIndex.HasValue || 
+            question.OrderIndex != participant.QuizSession.CurrentQuestionOrderIndex.Value)
+        {
+            return BadRequest($"Kan kun indsende svar på det nuværende spørgsmål (order index {participant.QuizSession.CurrentQuestionOrderIndex?.ToString() ?? "ingen"}). Du prøvede at svare på spørgsmål med order index {question.OrderIndex}");
+        }
+
         // Valider svar
         var answer = question.Answers.FirstOrDefault(a => a.Id == submitDto.AnswerId);
         if (answer == null)
@@ -105,6 +112,9 @@ public class ParticipantController : ControllerBase
         participant.TotalPoints += pointsEarned;
 
         await _context.SaveChangesAsync();
+
+        // Tjek om alle deltagere har svaret på dette spørgsmål
+        await CheckAndAdvanceQuestion(participant.QuizSession);
 
         return Ok(new 
         { 
@@ -178,7 +188,66 @@ public class ParticipantController : ControllerBase
     }
 
     /// <summary>
-    /// Hent et spørgsmål til en session
+    /// Hent nuværende spørgsmål for en session (centralt styret)
+    /// </summary>
+    /// <remarks>Auth: None - Offentlig endpoint. Returnerer det nuværende spørgsmål baseret på sessionens CurrentQuestionOrderIndex.</remarks>
+    [HttpGet("session/{sessionId}/current-question")]
+    public async Task<ActionResult<QuestionWithoutAnswersDto>> GetCurrentQuestion(int sessionId)
+    {
+        var session = await _context.QuizSessions
+            .Include(s => s.Quiz)
+            .FirstOrDefaultAsync(s => s.Id == sessionId);
+
+        if (session == null)
+        {
+            return NotFound($"Session med ID {sessionId} blev ikke fundet");
+        }
+
+        if (session.Status != QuizSessionStatus.InProgress)
+        {
+            return BadRequest($"Session skal være 'InProgress' for at hente spørgsmål. Nuværende status: {session.Status}");
+        }
+
+        if (!session.CurrentQuestionOrderIndex.HasValue)
+        {
+            return NotFound("Ingen aktivt spørgsmål i denne session");
+        }
+
+        var question = await _context.Questions
+            .Include(q => q.Answers)
+            .Where(q => q.QuizId == session.QuizId && q.OrderIndex == session.CurrentQuestionOrderIndex.Value)
+            .FirstOrDefaultAsync();
+
+        if (question == null)
+        {
+            return NotFound($"Spørgsmål med order index {session.CurrentQuestionOrderIndex.Value} blev ikke fundet i denne quiz");
+        }
+
+        var questionDto = new QuestionWithoutAnswersDto
+        {
+            Id = question.Id,
+            Text = question.Text,
+            TimeLimitSeconds = question.TimeLimitSeconds,
+            Points = question.Points,
+            OrderIndex = question.OrderIndex,
+            Answers = question.Answers
+                .OrderBy(a => a.OrderIndex)
+                .Select(a => new AnswerDto
+                {
+                    Id = a.Id,
+                    Text = a.Text,
+                    IsCorrect = false, // Skjul korrekt svar fra deltagere
+                    OrderIndex = a.OrderIndex,
+                    CreatedAt = a.CreatedAt
+                })
+                .ToList()
+        };
+
+        return Ok(questionDto);
+    }
+
+    /// <summary>
+    /// Hent et spørgsmål til en session (deprecated - brug GetCurrentQuestion i stedet)
     /// </summary>
     /// <remarks>Auth: None - Offentlig endpoint. Returnerer spørgsmål uden korrekt svar (for deltagere).</remarks>
     [HttpGet("session/{sessionId}/question/{questionOrderIndex}")]
@@ -191,6 +260,20 @@ public class ParticipantController : ControllerBase
         if (session == null)
         {
             return NotFound($"Session med ID {sessionId} blev ikke fundet");
+        }
+
+        // Valider at spørgsmålet matcher sessionens nuværende spørgsmål (centralt styret)
+        if (session.Status == QuizSessionStatus.InProgress)
+        {
+            if (!session.CurrentQuestionOrderIndex.HasValue)
+            {
+                return BadRequest("Ingen aktivt spørgsmål i denne session. Brug /current-question endpoint i stedet.");
+            }
+
+            if (questionOrderIndex != session.CurrentQuestionOrderIndex.Value)
+            {
+                return BadRequest($"Kan kun hente det nuværende spørgsmål (order index {session.CurrentQuestionOrderIndex.Value}). Du prøvede at hente spørgsmål med order index {questionOrderIndex}. Brug /current-question endpoint i stedet.");
+            }
         }
 
         var question = await _context.Questions
@@ -224,6 +307,91 @@ public class ParticipantController : ControllerBase
         };
 
         return Ok(questionDto);
+    }
+
+    /// <summary>
+    /// Tjek om alle deltagere har svaret på nuværende spørgsmål eller om tiden er udløbet, og gå videre hvis en af dem er opfyldt
+    /// </summary>
+    public async Task CheckAndAdvanceQuestion(QuizSession session)
+    {
+        if (!session.CurrentQuestionOrderIndex.HasValue)
+        {
+            return; // Ingen aktivt spørgsmål
+        }
+
+        // Hent alle deltagere i sessionen
+        var participants = await _context.Participants
+            .Where(p => p.QuizSessionId == session.Id)
+            .ToListAsync();
+
+        if (participants.Count == 0)
+        {
+            return; // Ingen deltagere
+        }
+
+        // Hent nuværende spørgsmål
+        var currentQuestion = await _context.Questions
+            .Where(q => q.QuizId == session.QuizId && q.OrderIndex == session.CurrentQuestionOrderIndex.Value)
+            .FirstOrDefaultAsync();
+
+        if (currentQuestion == null)
+        {
+            return; // Spørgsmål ikke fundet
+        }
+
+        // Tjek om tiden er udløbet
+        bool timeExpired = false;
+        if (session.CurrentQuestionStartedAt.HasValue)
+        {
+            var elapsed = DateTime.UtcNow - session.CurrentQuestionStartedAt.Value;
+            if (elapsed.TotalSeconds >= currentQuestion.TimeLimitSeconds)
+            {
+                timeExpired = true;
+            }
+        }
+
+        // Tjek om alle deltagere har svaret på dette spørgsmål
+        var answeredCount = await _context.ParticipantAnswers
+            .CountAsync(pa => pa.QuestionId == currentQuestion.Id && 
+                             participants.Select(p => p.Id).Contains(pa.ParticipantId));
+
+        bool allAnswered = answeredCount >= participants.Count;
+
+        // Gå kun videre hvis alle har svaret ELLER tiden er udløbet
+        if (!allAnswered && !timeExpired)
+        {
+            return; // Vent på flere svar eller timeout
+        }
+
+        // Hvis tiden er udløbet og nogle ikke har svaret, giv dem 0 point (ingen svar)
+        // Vi opretter ikke ParticipantAnswer for dem - de får bare 0 point implicit
+        // Dette gør det nemmere og vi undgår at skulle gøre AnswerId nullable
+
+        // Gå videre til næste spørgsmål
+        // Hent alle spørgsmål i quizzen for at finde næste
+        var allQuestions = await _context.Questions
+            .Where(q => q.QuizId == session.QuizId)
+            .OrderBy(q => q.OrderIndex)
+            .ToListAsync();
+
+        var currentQuestionIndex = allQuestions.FindIndex(q => q.Id == currentQuestion.Id);
+        
+        if (currentQuestionIndex < allQuestions.Count - 1)
+        {
+            // Der er flere spørgsmål - gå videre til næste
+            session.CurrentQuestionOrderIndex = allQuestions[currentQuestionIndex + 1].OrderIndex;
+            session.CurrentQuestionStartedAt = DateTime.UtcNow; // Start tid for næste spørgsmål
+            await _context.SaveChangesAsync();
+        }
+        else
+        {
+            // Dette var sidste spørgsmål - afslut sessionen
+            session.Status = QuizSessionStatus.Completed;
+            session.CompletedAt = DateTime.UtcNow;
+            session.CurrentQuestionOrderIndex = null; // Ingen aktivt spørgsmål længere
+            session.CurrentQuestionStartedAt = null;
+            await _context.SaveChangesAsync();
+        }
     }
 }
 

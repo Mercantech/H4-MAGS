@@ -40,7 +40,17 @@ class QuizRemoteDataSource {
     );
   }
 
-  /// Hent et spørgsmål til en session (uden korrekt svar)
+  /// Hent nuværende spørgsmål for en session (centralt styret)
+  Future<ApiResult<QuestionModel>> getCurrentQuestion({
+    required int sessionId,
+  }) async {
+    return await _apiClient.get<QuestionModel>(
+      '/participant/session/$sessionId/current-question',
+      fromJson: (json) => QuestionModel.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
+  /// Hent et spørgsmål til en session (uden korrekt svar) - deprecated, brug getCurrentQuestion
   Future<ApiResult<QuestionModel>> getQuestion({
     required int sessionId,
     required int questionOrderIndex,

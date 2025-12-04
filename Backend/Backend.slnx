@@ -2,4 +2,5 @@
   <Project Path="API/API.csproj" />
   <Project Path="Backend.AppHost/Backend.AppHost.csproj" />
   <Project Path="Backend.ServiceDefaults/Backend.ServiceDefaults.csproj" />
+  <Project Path="Tests/Tests.csproj" Id="45ed2bc6-a9d9-4d4a-a8ca-aa3eaa4690e0" />
 </Solution>

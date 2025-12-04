@@ -1,6 +1,9 @@
 ---
 banner: "![[DataHouse.png]]"
 ---
+---
+banner: "![[DataHouse.png]]"
+---
 # Banner - Nice to Have
 
 ## Introduktion

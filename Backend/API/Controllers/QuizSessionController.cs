@@ -66,7 +66,7 @@ public class QuizSessionController : ControllerBase
     /// <summary>
     /// Hent en session
     /// </summary>
-    /// <remarks>Auth: None - Offentlig endpoint. Returnerer session info med deltagere.</remarks>
+    /// <remarks>Auth: None - Offentlig endpoint. Returnerer session info med deltagere. Tjekker automatisk om tiden er udløbet for nuværende spørgsmål.</remarks>
     [HttpGet("{id}")]
     public async Task<ActionResult<SessionDto>> GetSession(int id)
     {
@@ -80,6 +80,17 @@ public class QuizSessionController : ControllerBase
             return NotFound($"Session med ID {id} blev ikke fundet");
         }
 
+        // Tjek om tiden er udløbet for nuværende spørgsmål (hvis quiz er i gang)
+        if (session.Status == QuizSessionStatus.InProgress && session.CurrentQuestionOrderIndex.HasValue)
+        {
+            await CheckAndAdvanceQuestionIfTimeout(session);
+            // Reload session efter potentiel opdatering
+            session = await _context.QuizSessions
+                .Include(s => s.Quiz)
+                .Include(s => s.Participants)
+                .FirstOrDefaultAsync(s => s.Id == id);
+        }
+
         var sessionDto = await MapToSessionDto(session);
         return Ok(sessionDto);
     }
@@ -87,7 +98,7 @@ public class QuizSessionController : ControllerBase
     /// <summary>
     /// Hent session via PIN
     /// </summary>
-    /// <remarks>Auth: None - Offentlig endpoint. Henter session via unik session PIN.</remarks>
+    /// <remarks>Auth: None - Offentlig endpoint. Henter session via unik session PIN. Tjekker automatisk om tiden er udløbet for nuværende spørgsmål.</remarks>
     [HttpGet("pin/{pin}")]
     public async Task<ActionResult<SessionDto>> GetSessionByPin(string pin)
     {
@@ -99,6 +110,17 @@ public class QuizSessionController : ControllerBase
         if (session == null)
         {
             return NotFound($"Session med PIN {pin} blev ikke fundet");
+        }
+
+        // Tjek om tiden er udløbet for nuværende spørgsmål (hvis quiz er i gang)
+        if (session.Status == QuizSessionStatus.InProgress && session.CurrentQuestionOrderIndex.HasValue)
+        {
+            await CheckAndAdvanceQuestionIfTimeout(session);
+            // Reload session efter potentiel opdatering
+            session = await _context.QuizSessions
+                .Include(s => s.Quiz)
+                .Include(s => s.Participants)
+                .FirstOrDefaultAsync(s => s.SessionPin == pin);
         }
 
         var sessionDto = await MapToSessionDto(session);
@@ -133,6 +155,8 @@ public class QuizSessionController : ControllerBase
 
         session.Status = QuizSessionStatus.InProgress;
         session.StartedAt = DateTime.UtcNow;
+        session.CurrentQuestionOrderIndex = 1; // Start med første spørgsmål
+        session.CurrentQuestionStartedAt = DateTime.UtcNow; // Start tid for første spørgsmål
 
         await _context.SaveChangesAsync();
 
@@ -247,10 +271,64 @@ public class QuizSessionController : ControllerBase
             CreatedAt = session.CreatedAt,
             StartedAt = session.StartedAt,
             CompletedAt = session.CompletedAt,
+            CurrentQuestionOrderIndex = session.CurrentQuestionOrderIndex,
             QuizId = session.QuizId,
             QuizTitle = quiz?.Title ?? string.Empty,
             ParticipantCount = session.Participants?.Count ?? 0
         };
+    }
+
+    /// <summary>
+    /// Tjek om tiden er udløbet for nuværende spørgsmål og gå videre hvis den er
+    /// </summary>
+    private async Task CheckAndAdvanceQuestionIfTimeout(QuizSession session)
+    {
+        if (!session.CurrentQuestionOrderIndex.HasValue || !session.CurrentQuestionStartedAt.HasValue)
+        {
+            return;
+        }
+
+        // Hent nuværende spørgsmål
+        var currentQuestion = await _context.Questions
+            .Where(q => q.QuizId == session.QuizId && q.OrderIndex == session.CurrentQuestionOrderIndex.Value)
+            .FirstOrDefaultAsync();
+
+        if (currentQuestion == null)
+        {
+            return;
+        }
+
+        // Tjek om tiden er udløbet
+        var elapsed = DateTime.UtcNow - session.CurrentQuestionStartedAt.Value;
+        if (elapsed.TotalSeconds < currentQuestion.TimeLimitSeconds)
+        {
+            return; // Tiden er ikke udløbet endnu
+        }
+
+        // Tiden er udløbet - gå videre til næste spørgsmål
+        var allQuestions = await _context.Questions
+            .Where(q => q.QuizId == session.QuizId)
+            .OrderBy(q => q.OrderIndex)
+            .ToListAsync();
+
+        var currentQuestionIndex = allQuestions.FindIndex(q => q.Id == currentQuestion.Id);
+        
+        if (currentQuestionIndex < allQuestions.Count - 1)
+        {
+            // Der er flere spørgsmål - gå videre til næste
+            session.CurrentQuestionOrderIndex = allQuestions[currentQuestionIndex + 1].OrderIndex;
+            session.CurrentQuestionStartedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
+        else
+        {
+            // Dette var sidste spørgsmål - afslut sessionen
+            session.Status = QuizSessionStatus.Completed;
+            session.CompletedAt = DateTime.UtcNow;
+            session.CurrentQuestionOrderIndex = null;
+            session.CurrentQuestionStartedAt = null;
+            await _context.SaveChangesAsync();
+        }
     }
 
     private static string GeneratePin()

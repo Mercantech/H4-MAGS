@@ -34,7 +34,16 @@ class QuizRepositoryImpl {
     );
   }
 
-  /// Hent spørgsmål
+  /// Hent nuværende spørgsmål (centralt styret)
+  Future<ApiResult<QuestionModel>> getCurrentQuestion({
+    required int sessionId,
+  }) {
+    return _remoteDataSource.getCurrentQuestion(
+      sessionId: sessionId,
+    );
+  }
+
+  /// Hent spørgsmål (deprecated - brug getCurrentQuestion)
   Future<ApiResult<QuestionModel>> getQuestion({
     required int sessionId,
     required int questionOrderIndex,
