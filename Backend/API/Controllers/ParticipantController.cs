@@ -312,7 +312,7 @@ public class ParticipantController : ControllerBase
     /// <summary>
     /// Tjek om alle deltagere har svaret på nuværende spørgsmål eller om tiden er udløbet, og gå videre hvis en af dem er opfyldt
     /// </summary>
-    public async Task CheckAndAdvanceQuestion(QuizSession session)
+    private async Task CheckAndAdvanceQuestion(QuizSession session)
     {
         if (!session.CurrentQuestionOrderIndex.HasValue)
         {
