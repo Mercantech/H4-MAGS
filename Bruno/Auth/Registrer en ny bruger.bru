@@ -12,12 +12,73 @@ post {
 
 body:json {
   {
-    "username": "",
-    "email": "",
-    "password": ""
+    "username": "{{testUsername}}",
+    "email": "{{testEmail}}",
+    "password": "{{testPassword}}"
   }
 }
 
+vars:pre-request {
+  testUsername: testuser
+  testEmail: test@example.com
+  testPassword: TestPassword123!
+}
+
+vars:post-response {
+  createdUserId: 
+}
+
+script:pre-request {
+  // Generer unikke testdata baseret på timestamp
+  // Note: Variabler gemmes automatisk i environment filen (environments/Kahoot.bru)
+  // hvis de allerede er defineret der. Sørg for at alle variabler er i environment filen.
+  const timestamp = Date.now();
+  const randomSuffix = Math.floor(Math.random() * 10000);
+  
+  // Gem i environment filen (variablerne skal være defineret i environments/Kahoot.bru først)
+  bru.setEnvVar("testUsername", `testuser_${timestamp}_${randomSuffix}`);
+  bru.setEnvVar("testEmail", `test_${timestamp}_${randomSuffix}@example.com`);
+  bru.setEnvVar("testPassword", "TestPassword123!");
+  
+  console.log(`Opretter testbruger: ${bru.getEnvVar("testUsername")}`);
+}
+
 script:post-response {
-  // Get UserID and save, for cleanup
+  // Gem userId og token fra responsen i environment filen
+  // Note: Variabler gemmes automatisk i environments/Kahoot.bru hvis de er defineret der
+  if (res.status === 200 || res.status === 201) {
+    const responseData = res.body;
+    
+    // Gem userId til brug ved cleanup (skal være defineret i environment filen)
+    if (responseData && responseData.user && responseData.user.id) {
+      const userId = responseData.user.id;
+      bru.setEnvVar("createdUserId", userId);
+      console.log(`Bruger oprettet med ID: ${userId} (gemt i environment)`);
+    }
+    
+    // Gem token baseret på brugerens rolle (samme logik som login)
+    if (responseData && responseData.token && responseData.user) {
+      const token = responseData.token;
+      const refreshToken = responseData.refreshToken;
+      const userRole = responseData.user.role;
+      
+      // Normaliser rolle navn (f.eks. "Student" -> "Student")
+      const roleKey = userRole.charAt(0).toUpperCase() + userRole.slice(1).toLowerCase();
+      
+      // Gem token baseret på rolle (skal være defineret i environment filen)
+      const tokenVarName = `authToken${roleKey}`;
+      const refreshTokenVarName = `refreshToken${roleKey}`;
+      
+      bru.setEnvVar(tokenVarName, token);
+      bru.setEnvVar(refreshTokenVarName, refreshToken);
+      
+      // Gem også i generel authToken (standard)
+      bru.setEnvVar("authToken", token);
+      
+      console.log(`Token gemt for rolle: ${roleKey} (gemt i environment)`);
+      console.log(`Variabler opdateret i: environments/Kahoot.bru`);
+    }
+  } else {
+    console.error(`Fejl ved oprettelse af bruger: ${res.status}`);
+  }
 }

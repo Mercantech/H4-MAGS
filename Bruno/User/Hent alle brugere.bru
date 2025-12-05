@@ -1,5 +1,5 @@
 meta {
-  name: Hent alle brugere
+  name: Hent alle brugere (Admin - fuld data)
   type: http
   seq: 1
 }
@@ -7,5 +7,21 @@ meta {
 get {
   url: {{baseUrl}}/api/User
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authTokenAdmin}}
+}
+
+script:pre-request {
+  // Fallback: Hvis authTokenAdmin ikke er sat, brug generel authToken
+  const adminToken = bru.getEnvVar("authTokenAdmin");
+  if (!adminToken) {
+    const fallbackToken = bru.getEnvVar("authToken");
+    if (fallbackToken) {
+      bru.setEnvVar("authTokenAdmin", fallbackToken);
+      console.log("Bruger generel authToken som fallback for Admin endpoint");
+    }
+  }
 }

@@ -1,7 +1,7 @@
 meta {
-  name: Slet bruger
+  name: Slet testbruger (cleanup)
   type: http
-  seq: 7
+  seq: 8
 }
 
 delete {
@@ -15,7 +15,7 @@ params:path {
 }
 
 auth:bearer {
-  token: {{authTokenAdmin}}
+  token: {{authToken}}
 }
 
 script:pre-request {
@@ -29,12 +29,21 @@ script:pre-request {
     }
   }
   
-  // Slet bruger oprettet i test
+  // Cleanup: Slet bruger oprettet i test
   const userId = bru.getEnvVar("createdUserId");
   if (!userId) {
     console.warn("Ingen createdUserId fundet - springer cleanup over");
-    bru.skip();
   } else {
-    console.log(`Sletter testbruger med ID: ${userId}`);
+    console.log(`Cleanup: Sletter testbruger med ID: ${userId}`);
+  }
+}
+
+script:post-response {
+  if (res.status === 204 || res.status === 200) {
+    const userId = bru.getEnvVar("createdUserId");
+    console.log(`Testbruger ${userId} slettet succesfuldt`);
+    bru.setEnvVar("createdUserId", "");
+  } else {
+    console.error(`Fejl ved sletning af testbruger: ${res.status}`);
   }
 }

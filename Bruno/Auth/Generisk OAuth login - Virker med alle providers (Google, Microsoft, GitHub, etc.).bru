@@ -16,3 +16,37 @@ body:json {
     "accessToken": ""
   }
 }
+
+script:post-response {
+  // Gem token baseret på brugerens rolle i environment filen
+  // Note: Variabler gemmes automatisk i environments/Kahoot.bru hvis de er defineret der
+  if (res.status === 200 || res.status === 201) {
+    const responseData = res.body;
+    if (responseData && responseData.token && responseData.user) {
+      const token = responseData.token;
+      const refreshToken = responseData.refreshToken;
+      const userRole = responseData.user.role;
+      
+      // Normaliser rolle navn (f.eks. "Student" -> "Student")
+      const roleKey = userRole.charAt(0).toUpperCase() + userRole.slice(1).toLowerCase();
+      
+      // Gem token baseret på rolle (skal være defineret i environment filen)
+      const tokenVarName = `authToken${roleKey}`;
+      const refreshTokenVarName = `refreshToken${roleKey}`;
+      
+      bru.setEnvVar(tokenVarName, token);
+      bru.setEnvVar(refreshTokenVarName, refreshToken);
+      
+      // Gem også i generel authToken (standard)
+      bru.setEnvVar("authToken", token);
+      
+      console.log(`OAuth token gemt for rolle: ${roleKey} (gemt i environment)`);
+      console.log(`Bruger: ${responseData.user.username} (${responseData.user.email})`);
+      console.log(`Variabler opdateret i: environments/Kahoot.bru`);
+    } else {
+      console.error("Kunne ikke finde token eller user i responsen");
+    }
+  } else {
+    console.error(`OAuth login fejlede: ${res.status}`);
+  }
+}

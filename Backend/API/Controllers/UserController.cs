@@ -1,6 +1,7 @@
 using API.Data;
 using API.DTOs.Auth;
 using API.Models;
+using API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,11 +15,16 @@ public class UserController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<UserController> _logger;
+    private readonly IAuthService _authService;
 
-    public UserController(ApplicationDbContext context, ILogger<UserController> logger)
+    public UserController(
+        ApplicationDbContext context, 
+        ILogger<UserController> logger,
+        IAuthService authService)
     {
         _context = context;
         _logger = logger;
+        _authService = authService;
     }
 
     /// <summary>
@@ -243,9 +249,58 @@ public class UserController : ControllerBase
     }
 
     /// <summary>
-    /// Slet bruger
+    /// Slet egen bruger (selv-sletning)
     /// </summary>
-    /// <remarks>Auth: Admin - Sletter bruger fra systemet. Admin kan ikke slette sig selv.</remarks>
+    /// <remarks>
+    /// Auth: Authenticated - Brugere kan slette deres egen konto.
+    /// - Brugere med password skal bekræfte med password
+    /// - SSO-only brugere kan slette uden password bekræftelse
+    /// </remarks>
+    [HttpDelete("me")]
+    public async Task<IActionResult> DeleteCurrentUser([FromBody] DeleteUserDto? deleteDto = null)
+    {
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var currentUserId))
+        {
+            return Unauthorized();
+        }
+
+        var user = await _context.Users.FindAsync(currentUserId);
+        if (user == null)
+        {
+            return NotFound("Bruger blev ikke fundet");
+        }
+
+        // SSO-only brugere har ikke password, så de kan slette uden bekræftelse
+        if (!string.IsNullOrEmpty(user.PasswordHash))
+        {
+            if (deleteDto == null || string.IsNullOrWhiteSpace(deleteDto.Password))
+            {
+                return BadRequest("Password bekræftelse er påkrævet for at slette din konto");
+            }
+
+            // Verificer password
+            if (!await _authService.VerifyPasswordAsync(deleteDto.Password, user.PasswordHash))
+            {
+                return BadRequest("Forkert password");
+            }
+        }
+
+        // Slet brugeren (cascade delete håndterer relateret data automatisk)
+        _context.Users.Remove(user);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Bruger {UserId} slettede sin egen konto", currentUserId);
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Slet bruger (Admin)
+    /// </summary>
+    /// <remarks>
+    /// Auth: Admin - Sletter bruger fra systemet. Admin kan ikke slette sig selv (brug DELETE /api/user/me i stedet).
+    /// </remarks>
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteUser(int id)
@@ -256,10 +311,10 @@ public class UserController : ControllerBase
             return Unauthorized();
         }
 
-        // Admin kan ikke slette sig selv
+        // Admin kan ikke slette sig selv (brug selv-sletning i stedet)
         if (currentUserId == id)
         {
-            return BadRequest("Du kan ikke slette din egen konto");
+            return BadRequest("Admin kan ikke slette sig selv via admin endpoint. Brug DELETE /api/user/me i stedet.");
         }
 
         var user = await _context.Users.FindAsync(id);
@@ -268,8 +323,11 @@ public class UserController : ControllerBase
             return NotFound($"Bruger med ID {id} blev ikke fundet");
         }
 
+        // Slet brugeren (cascade delete håndterer relateret data automatisk)
         _context.Users.Remove(user);
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Bruger {UserId} blev slettet af admin {AdminUserId}", id, currentUserId);
 
         return NoContent();
     }
