@@ -35,6 +35,7 @@ services:
       - "5341:5341"  # HTTPS (for ekstern adgang)
     environment:
       - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_ADMINPASSWORD=Admin123!  
     volumes:
       - seq-data:/data
     restart: unless-stopped
