@@ -10,6 +10,10 @@ services:
     environment:
       - ASPNETCORE_URLS=http://+:5000
       - ASPNETCORE_ENVIRONMENT=Production
+      # Seq logging - bruger Docker service navn internt (http://seq:80)
+      # For ekstern adgang, sæt Seq__ServerUrl=https://kahoot-log.mercantec.tech i .env filen
+    depends_on:
+      - seq
     networks:
       - app-network
 

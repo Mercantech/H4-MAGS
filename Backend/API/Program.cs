@@ -7,8 +7,36 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using Serilog;
+
+// Konfigurer Serilog tidligt
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
+
+Log.Information("Starter H4-MAGS API...");
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Tilføj Serilog til hosting
+builder.Host.UseSerilog((context, services, configuration) =>
+{
+    var seqServerUrl = context.Configuration["Seq:ServerUrl"] ?? "http://seq:80";
+    Log.Information("Konfigureret Serilog til at sende logs til Seq på: {SeqUrl}", seqServerUrl);
+    
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .WriteTo.Console()
+        .WriteTo.Seq(
+            serverUrl: seqServerUrl,
+            apiKey: context.Configuration["Seq:ApiKey"],
+            restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Verbose,
+            period: TimeSpan.FromSeconds(2),
+            batchPostingLimit: 100
+        );
+});
 
 builder.AddServiceDefaults();
 
@@ -184,4 +212,16 @@ app.Lifetime.ApplicationStarted.Register(() =>
     }
 });
 
-app.Run();
+try
+{
+    Log.Information("H4-MAGS API started successfully");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "H4-MAGS API terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
