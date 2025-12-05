@@ -18,16 +18,6 @@ body:json {
   }
 }
 
-vars:pre-request {
-  testUsername: testuser
-  testEmail: test@example.com
-  testPassword: TestPassword123!
-}
-
-vars:post-response {
-  createdUserId: 
-}
-
 script:pre-request {
   // Generer unikke testdata baseret på timestamp
   // Note: Variabler gemmes automatisk i environment filen (environments/Kahoot.bru)
@@ -81,4 +71,70 @@ script:post-response {
   } else {
     console.error(`Fejl ved oprettelse af bruger: ${res.status}`);
   }
+}
+
+tests {
+  test("Status skal være 200 eller 201", function() {
+    expect(res.getStatus()).to.be.oneOf([200, 201]);
+  });
+
+  test("Response skal indeholde token", function() {
+    const data = res.getBody();
+    expect(data).to.have.property("token");
+    expect(data.token).to.be.a("string");
+    expect(data.token.length).to.be.greaterThan(0);
+  });
+
+  test("Response skal indeholde refreshToken", function() {
+    const data = res.getBody();
+    expect(data).to.have.property("refreshToken");
+    expect(data.refreshToken).to.be.a("string");
+    expect(data.refreshToken.length).to.be.greaterThan(0);
+  });
+
+  test("Response skal indeholde user objekt", function() {
+    const data = res.getBody();
+    expect(data).to.have.property("user");
+    expect(data.user).to.be.an("object");
+  });
+
+  test("User objekt skal indeholde id", function() {
+    const data = res.getBody();
+    expect(data.user).to.have.property("id");
+    expect(data.user.id).to.be.a("number");
+    expect(data.user.id).to.be.greaterThan(0);
+  });
+
+  test("User objekt skal indeholde username", function() {
+    const data = res.getBody();
+    expect(data.user).to.have.property("username");
+    expect(data.user.username).to.be.a("string");
+    expect(data.user.username.length).to.be.greaterThan(0);
+  });
+
+  test("User objekt skal indeholde email", function() {
+    const data = res.getBody();
+    expect(data.user).to.have.property("email");
+    expect(data.user.email).to.be.a("string");
+    expect(data.user.email).to.include("@");
+  });
+
+  test("User objekt skal indeholde role", function() {
+    const data = res.getBody();
+    expect(data.user).to.have.property("role");
+    expect(data.user.role).to.be.a("string");
+    expect(["Student", "Teacher", "Admin"]).to.include(data.user.role);
+  });
+
+  test("Username skal matche det sendte username", function() {
+    const data = res.getBody();
+    const sentUsername = bru.getEnvVar("testUsername");
+    expect(data.user.username.toLowerCase()).to.equal(sentUsername.toLowerCase());
+  });
+
+  test("Email skal matche den sendte email", function() {
+    const data = res.getBody();
+    const sentEmail = bru.getEnvVar("testEmail");
+    expect(data.user.email.toLowerCase()).to.equal(sentEmail.toLowerCase());
+  });
 }

@@ -28,6 +28,22 @@ services:
     networks:
       - app-network
 
+  seq:
+    image: datalust/seq:latest
+    ports:
+      - "9082:80"    # HTTP UI og API
+      - "5341:5341"  # HTTPS (for ekstern adgang)
+    environment:
+      - ACCEPT_EULA=Y
+    volumes:
+      - seq-data:/data
+    restart: unless-stopped
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  seq-data:
