@@ -1,0 +1,15 @@
+meta {
+  name: Hent nuværende spørgsmål for en session (centralt styret)
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/Participant/session/:sessionId/current-question
+  body: none
+  auth: none
+}
+
+params:path {
+  sessionId: 
+}

@@ -22,9 +22,58 @@ public class UserController : ControllerBase
     }
 
     /// <summary>
-    /// Hent alle brugere
+    /// Hent alle brugere (offentlig - minimal data)
     /// </summary>
-    /// <remarks>Auth: Admin - Returnerer liste af alle brugere i systemet.</remarks>
+    /// <remarks>
+    /// Auth: Anonymous - Returnerer liste af alle brugere med minimal information (Id, Username, Picture).
+    /// Brug dette endpoint når du kun har brug for grundlæggende brugerinformation.
+    /// </remarks>
+    [HttpGet("public")]
+    [AllowAnonymous]
+    public async Task<ActionResult<IEnumerable<PublicUserDto>>> GetPublicUsers()
+    {
+        var users = await _context.Users
+            .OrderBy(u => u.Username)
+            .Select(u => new PublicUserDto
+            {
+                Id = u.Id,
+                Username = u.Username,
+                Picture = u.Picture
+            })
+            .ToListAsync();
+
+        return Ok(users);
+    }
+
+    /// <summary>
+    /// Hent alle brugere (offentlig - basis data)
+    /// </summary>
+    /// <remarks>
+    /// Auth: Anonymous - Returnerer liste af alle brugere med basis information (Id, Username, Role, Picture).
+    /// Email og CreatedAt er bevidst udeladt for at beskytte brugerdata.
+    /// </remarks>
+    [HttpGet("basic")]
+    [AllowAnonymous]
+    public async Task<ActionResult<IEnumerable<BasicUserDto>>> GetBasicUsers()
+    {
+        var users = await _context.Users
+            .OrderBy(u => u.Username)
+            .Select(u => new BasicUserDto
+            {
+                Id = u.Id,
+                Username = u.Username,
+                Role = u.Role.ToString(),
+                Picture = u.Picture
+            })
+            .ToListAsync();
+
+        return Ok(users);
+    }
+
+    /// <summary>
+    /// Hent alle brugere (fuld data)
+    /// </summary>
+    /// <remarks>Auth: Admin - Returnerer liste af alle brugere i systemet med fuld information.</remarks>
     [HttpGet]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers()

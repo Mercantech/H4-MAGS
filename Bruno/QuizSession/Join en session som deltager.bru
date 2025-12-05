@@ -1,0 +1,18 @@
+meta {
+  name: Join en session som deltager
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/QuizSession/join
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "sessionPin": "",
+    "nickname": ""
+  }
+}

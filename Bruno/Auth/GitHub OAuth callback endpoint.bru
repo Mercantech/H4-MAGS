@@ -1,0 +1,17 @@
+meta {
+  name: GitHub OAuth callback endpoint
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/auth/github/callback
+  body: none
+  auth: none
+}
+
+params:query {
+  ~code: 
+  ~error: 
+  ~state: 
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Hent quiz via PIN
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/Quiz/pin/:pin
+  body: none
+  auth: none
+}
+
+params:path {
+  pin: 
+}

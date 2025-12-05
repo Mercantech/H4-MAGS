@@ -1,0 +1,22 @@
+meta {
+  name: Opdater en quiz
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/Quiz/:id
+  body: json
+  auth: none
+}
+
+params:path {
+  id: 
+}
+
+body:json {
+  {
+    "title": "",
+    "description": ""
+  }
+}

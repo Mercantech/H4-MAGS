@@ -1,0 +1,15 @@
+meta {
+  name: Hent en session
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/QuizSession/:id
+  body: none
+  auth: none
+}
+
+params:path {
+  id: 
+}

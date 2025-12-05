@@ -8,9 +8,34 @@ namespace API.Services;
 
 public interface IAuthService
 {
+    /// <summary>
+    /// Register med username, email og password
+    /// </summary>
     Task<User?> RegisterAsync(string username, string email, string password, UserRole role);
+
+    /// <summary>
+    /// Login med username eller email og password
+    /// </summary>
     Task<User?> LoginAsync(string usernameOrEmail, string password);
+
+    /// <summary>
+    /// Verify password med PBKDF2 med HMAC-SHA256
+    /// 
+    /// PBKDF2 med HMAC-SHA256 er en hash funktion der bruges til at hashe passwords.
+    /// HMAC-SHA256 er en hash funktion der bruges til at hashe passwords.
+    /// PBKDF2 er en hash funktion der bruges til at hashe passwords.
+    /// HMAC-SHA256 er en hash funktion der bruges til at hashe passwords.
+    /// </summary>
     Task<bool> VerifyPasswordAsync(string password, string passwordHash);
+
+    /// <summary>
+    /// Hash password med PBKDF2 med HMAC-SHA256, 100000 iterations
+    /// 
+    /// PBKDF2 med HMAC-SHA256 er en hash funktion der bruges til at hashe passwords.
+    /// HMAC-SHA256 er en hash funktion der bruges til at hashe passwords.
+    /// PBKDF2 er en hash funktion der bruges til at hashe passwords.
+    /// HMAC-SHA256 er en hash funktion der bruges til at hashe passwords.
+    /// </summary>
     string HashPassword(string password);
     
     /// <summary>
@@ -75,7 +100,7 @@ public class AuthService : IAuthService
         }
 
         // BEST PRACTICE: Tjek om brugeren har et password
-        // SSO-only brugere kan ikke logge ind med password
+        // SSO-only brugere kan ikke logge ind med password uden at have linket en password til brugeren (account linking)
         if (string.IsNullOrEmpty(user.PasswordHash))
         {
             _logger.LogWarning("Bruger {Email} forsøger at logge ind med password, men har kun SSO", user.Email);

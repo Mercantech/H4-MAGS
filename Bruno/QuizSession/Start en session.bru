@@ -1,0 +1,15 @@
+meta {
+  name: Start en session
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/QuizSession/:id/start
+  body: none
+  auth: none
+}
+
+params:path {
+  id: 
+}

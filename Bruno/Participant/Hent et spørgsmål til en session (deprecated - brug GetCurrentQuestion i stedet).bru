@@ -1,0 +1,16 @@
+meta {
+  name: Hent et spørgsmål til en session (deprecated - brug GetCurrentQuestion i stedet)
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/Participant/session/:sessionId/question/:questionOrderIndex
+  body: none
+  auth: none
+}
+
+params:path {
+  sessionId: 
+  questionOrderIndex: 
+}

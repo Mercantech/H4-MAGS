@@ -1,0 +1,17 @@
+meta {
+  name: Start en ny quiz session
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/QuizSession
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "quizId": 0
+  }
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Afslut en session
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/QuizSession/:id/complete
+  body: none
+  auth: none
+}
+
+params:path {
+  id: 
+}

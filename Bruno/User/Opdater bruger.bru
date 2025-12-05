@@ -1,0 +1,23 @@
+meta {
+  name: Opdater bruger
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/api/User/:id
+  body: json
+  auth: none
+}
+
+params:path {
+  id: 
+}
+
+body:json {
+  {
+    "username": "",
+    "email": "",
+    "role": 0
+  }
+}

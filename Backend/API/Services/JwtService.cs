@@ -10,8 +10,21 @@ namespace API.Services;
 
 public interface IJwtService
 {
+    /// <summary>
+    /// Generate JWT token - som sendes til brugeren i Authorization header
+    /// </summary>
     string GenerateToken(User user, string? authProvider = null);
+
+    /// <summary>
+    /// Generate refresh token - som gemmes i databasen, 
+    /// hvilket gør det muligt at generere nye tokens uden at brugeren skal logge ind igen.
+    /// </summary>
     string GenerateRefreshToken();
+
+    /// <summary>
+    /// Get principal from token - som bruges til at håndtere claims i token
+    /// Claims er de data der er gemt i token..
+    /// </summary>
     ClaimsPrincipal? GetPrincipalFromToken(string token);
 }
 
@@ -52,7 +65,7 @@ public class JwtService : IJwtService
             new Claim("auth_provider", provider) // Custom claim for login metode
         };
 
-        // Issuer er altid H4-MAGS-API (ikke baseret på login metode)
+        // Issuer er altid H4-MAGS-API (ikke baseret på login metode, da det er et seperat claim)
         var issuer = _configuration.GetConfigValue("Jwt:Issuer", "Jwt__Issuer") ?? "H4-MAGS-API";
         var audience = _configuration.GetConfigValue("Jwt:Audience", "Jwt__Audience") ?? "H4-MAGS-Client";
         var expirationMinutes = int.Parse(_configuration.GetConfigValue("Jwt:ExpirationMinutes", "Jwt__ExpirationMinutes") ?? "60");

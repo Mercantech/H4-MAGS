@@ -1,0 +1,15 @@
+meta {
+  name: Hent leaderboard for en session
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/Participant/leaderboard/:sessionId
+  body: none
+  auth: none
+}
+
+params:path {
+  sessionId: 
+}

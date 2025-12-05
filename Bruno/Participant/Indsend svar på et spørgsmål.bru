@@ -1,0 +1,20 @@
+meta {
+  name: Indsend svar på et spørgsmål
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/Participant/submit-answer
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "participantId": 0,
+    "questionId": 0,
+    "answerId": 0,
+    "responseTimeMs": 0
+  }
+}

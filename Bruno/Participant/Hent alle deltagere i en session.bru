@@ -1,0 +1,15 @@
+meta {
+  name: Hent alle deltagere i en session
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/Participant/session/:sessionId
+  body: none
+  auth: none
+}
+
+params:path {
+  sessionId: 
+}
