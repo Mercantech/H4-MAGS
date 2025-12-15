@@ -95,7 +95,7 @@ public void TestEksempel()
 ### Eksempel 1: Test Pure Function
 ```csharp
 [Test]
-public void HashPassword_MedGyldigtPassword_ReturnererHash()
+public void HashPassword_WithValidPassword_ReturnsHash()
 {
     // ARRANGE
     var password = "Test123";
@@ -124,7 +124,7 @@ public void Setup()
 ### Eksempel 3: Test Edge Cases
 ```csharp
 [Test]
-public void HashPassword_MedTomtPassword_ReturnererHash()
+public void HashPassword_WithEmptyPassword_ReturnsHash()
 {
     // ARRANGE
     var password = "";

@@ -31,7 +31,7 @@ public class UnitTest1
     /// ASSERT: Verificer resultat
     /// </summary>
     [Test]
-    public void Test1()
+    public void Add_WhenAddingTwoNumbers_ReturnsSum()
     {
         // ARRANGE
         var expected = 2;

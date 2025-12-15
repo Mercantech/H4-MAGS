@@ -30,7 +30,7 @@ public class QuizControllerHelperTests
     /// ASSERT: Verificer format
     /// </summary>
     [Test]
-    public void GeneratePin_Returnerer6CifretNummer()
+    public void GeneratePin_WhenCalled_ReturnsSixDigitNumber()
     {
         // ARRANGE: Ingen setup nødvendig for static metode
 
@@ -52,7 +52,7 @@ public class QuizControllerHelperTests
     /// Test 2: GeneratePin skal producere forskellige PINs
     /// </summary>
     [Test]
-    public void GeneratePin_KaldtFlereGange_ReturnererForskelligePins()
+    public void GeneratePin_WhenCalledMultipleTimes_ReturnsDifferentPins()
     {
         // ARRANGE
         var method = typeof(QuizController).GetMethod("GeneratePin", 
@@ -74,7 +74,7 @@ public class QuizControllerHelperTests
     /// Test 3: GeneratePin skal producere PINs i korrekt interval
     /// </summary>
     [Test]
-    public void GeneratePin_ReturnererPinsMellem100000Og999999()
+    public void GeneratePin_WhenCalled_ReturnsPinsWithinRange()
     {
         // ARRANGE
         var method = typeof(QuizController).GetMethod("GeneratePin", 
@@ -106,7 +106,7 @@ public class QuizControllerHelperTests
     /// Dette er en pure function - perfekt til unit test!
     /// </summary>
     [Test]
-    public void MapToQuizDto_MedKompletQuiz_MapperAlleProperties()
+    public void MapToQuizDto_WithCompleteQuiz_MapsAllProperties()
     {
         // ARRANGE: Opret en test quiz med alle data
         var quiz = new Quiz
@@ -166,7 +166,7 @@ public class QuizControllerHelperTests
     /// Test 5: MapToQuizDto skal sortere spørgsmål efter OrderIndex
     /// </summary>
     [Test]
-    public void MapToQuizDto_MedUsorteredeSpørgsmål_SortererEfterOrderIndex()
+    public void MapToQuizDto_WithUnsortedQuestions_SortsByOrderIndex()
     {
         // ARRANGE: Opret quiz med usorterede spørgsmål
         var quiz = new Quiz
@@ -197,7 +197,7 @@ public class QuizControllerHelperTests
     /// Test 6: MapToQuizDto skal sortere svar efter OrderIndex
     /// </summary>
     [Test]
-    public void MapToQuizDto_MedUsorteredeSvar_SortererEfterOrderIndex()
+    public void MapToQuizDto_WithUnsortedAnswers_SortsAnswersByOrderIndex()
     {
         // ARRANGE
         var quiz = new Quiz
@@ -237,7 +237,7 @@ public class QuizControllerHelperTests
     /// Test 7: MapToQuizDto skal håndtere tom quiz (ingen spørgsmål)
     /// </summary>
     [Test]
-    public void MapToQuizDto_MedTomQuiz_ReturnererQuizUdenSpørgsmål()
+    public void MapToQuizDto_WithEmptyQuiz_ReturnsQuizWithoutQuestions()
     {
         // ARRANGE
         var quiz = new Quiz

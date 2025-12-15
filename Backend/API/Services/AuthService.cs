@@ -64,6 +64,14 @@ public class AuthService : IAuthService
         var normalizedUsername = username?.Trim().ToLowerInvariant() ?? string.Empty;
         var normalizedEmail = email?.Trim().ToLowerInvariant() ?? string.Empty;
 
+        // Valider password krav
+        var (isValid, errorMessage) = ValidatePassword(password);
+        if (!isValid)
+        {
+            _logger.LogWarning("Password validering fejlede ved registrering: {ErrorMessage}", errorMessage);
+            return null;
+        }
+
         // Tjek om username eller email allerede eksisterer (case-insensitive)
         if (await _context.Users.AnyAsync(u => 
             u.Username == normalizedUsername || u.Email == normalizedEmail))
@@ -168,6 +176,14 @@ public class AuthService : IAuthService
             return false;
         }
 
+        // Valider password krav
+        var (isValid, errorMessage) = ValidatePassword(password);
+        if (!isValid)
+        {
+            _logger.LogWarning("Password validering fejlede ved tilføjelse af password for bruger ID {UserId}: {ErrorMessage}", userId, errorMessage);
+            return false;
+        }
+
         // Hvis brugeren allerede har et password, opdater det
         // Dette gør det muligt at ændre password også
         user.PasswordHash = HashPassword(password);
@@ -176,6 +192,50 @@ public class AuthService : IAuthService
         _logger.LogInformation("Password tilføjet/opdateret for bruger ID: {UserId}", userId);
         
         return true;
+    }
+
+    /// <summary>
+    /// Validerer password mod platformens krav.
+    /// Krav:
+    /// - Minimum 8 tegn
+    /// - Mindst ét stort bogstav (A-Z)
+    /// - Mindst ét lille bogstav (a-z)
+    /// - Mindst ét tal (0-9)
+    /// </summary>
+    /// <param name="password">Password der skal valideres</param>
+    /// <returns>Tuple med (isValid, errorMessage)</returns>
+    private (bool isValid, string? errorMessage) ValidatePassword(string password)
+    {
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            return (false, "Password må ikke være tomt");
+        }
+
+        // Minimum 8 tegn
+        if (password.Length < 8)
+        {
+            return (false, "Password skal være mindst 8 tegn langt");
+        }
+
+        // Mindst ét stort bogstav
+        if (!password.Any(char.IsUpper))
+        {
+            return (false, "Password skal indeholde mindst ét stort bogstav (A-Z)");
+        }
+
+        // Mindst ét lille bogstav
+        if (!password.Any(char.IsLower))
+        {
+            return (false, "Password skal indeholde mindst ét lille bogstav (a-z)");
+        }
+
+        // Mindst ét tal
+        if (!password.Any(char.IsDigit))
+        {
+            return (false, "Password skal indeholde mindst ét tal (0-9)");
+        }
+
+        return (true, null);
     }
 }
 

@@ -28,7 +28,7 @@ public class UserModelTests
     /// ASSERT: Verificer at den er lowercase
     /// </summary>
     [Test]
-    public void Username_SetMedStoreBogstaver_NormalisererTilLowercase()
+    public void Username_SetWithUppercase_NormalizesToLowercase()
     {
         // ARRANGE & ACT
         var user = new User
@@ -44,7 +44,7 @@ public class UserModelTests
     /// Test 2: Username skal trimme whitespace
     /// </summary>
     [Test]
-    public void Username_SetMedWhitespace_TrimmerWhitespace()
+    public void Username_SetWithWhitespace_TrimsWhitespace()
     {
         // ARRANGE & ACT
         var user = new User
@@ -60,7 +60,7 @@ public class UserModelTests
     /// Test 3: Username skal håndtere null
     /// </summary>
     [Test]
-    public void Username_SetTilNull_BliverTilTomStreng()
+    public void Username_SetToNull_BecomesEmptyString()
     {
         // ARRANGE & ACT
         var user = new User
@@ -76,7 +76,7 @@ public class UserModelTests
     /// Test 4: Username skal håndtere tom streng
     /// </summary>
     [Test]
-    public void Username_SetTilTomStreng_ForbliverTomStreng()
+    public void Username_SetToEmptyString_RemainsEmptyString()
     {
         // ARRANGE & ACT
         var user = new User
@@ -96,7 +96,7 @@ public class UserModelTests
     /// Test 5: Email skal normalisere til lowercase
     /// </summary>
     [Test]
-    public void Email_SetMedStoreBogstaver_NormalisererTilLowercase()
+    public void Email_SetWithUppercase_NormalizesToLowercase()
     {
         // ARRANGE & ACT
         var user = new User
@@ -112,7 +112,7 @@ public class UserModelTests
     /// Test 6: Email skal trimme whitespace
     /// </summary>
     [Test]
-    public void Email_SetMedWhitespace_TrimmerWhitespace()
+    public void Email_SetWithWhitespace_TrimsWhitespace()
     {
         // ARRANGE & ACT
         var user = new User
@@ -128,7 +128,7 @@ public class UserModelTests
     /// Test 7: Email skal håndtere null
     /// </summary>
     [Test]
-    public void Email_SetTilNull_BliverTilTomStreng()
+    public void Email_SetToNull_BecomesEmptyString()
     {
         // ARRANGE & ACT
         var user = new User
@@ -148,7 +148,7 @@ public class UserModelTests
     /// Test 8: Role skal have default værdi
     /// </summary>
     [Test]
-    public void Role_DefaultVærdi_ErStudent()
+    public void Role_DefaultValue_IsStudent()
     {
         // ARRANGE & ACT
         var user = new User();
@@ -161,7 +161,7 @@ public class UserModelTests
     /// Test 9: Role skal kunne sættes til Teacher
     /// </summary>
     [Test]
-    public void Role_SetTilTeacher_BliverTeacher()
+    public void Role_SetToTeacher_SetsTeacher()
     {
         // ARRANGE & ACT
         var user = new User
@@ -177,7 +177,7 @@ public class UserModelTests
     /// Test 10: Role skal kunne sættes til Admin
     /// </summary>
     [Test]
-    public void Role_SetTilAdmin_BliverAdmin()
+    public void Role_SetToAdmin_SetsAdmin()
     {
         // ARRANGE & ACT
         var user = new User
@@ -197,7 +197,7 @@ public class UserModelTests
     /// Test 11: PasswordHash skal kunne være null (SSO-only brugere)
     /// </summary>
     [Test]
-    public void PasswordHash_SetTilNull_ForbliverNull()
+    public void PasswordHash_SetToNull_RemainsNull()
     {
         // ARRANGE & ACT
         var user = new User
@@ -213,7 +213,7 @@ public class UserModelTests
     /// Test 12: PasswordHash skal kunne sættes
     /// </summary>
     [Test]
-    public void PasswordHash_SetTilHash_ForbliverHash()
+    public void PasswordHash_SetToHash_RemainsHash()
     {
         // ARRANGE & ACT
         var hash = "100000:salt:hash";
@@ -234,7 +234,7 @@ public class UserModelTests
     /// Test 13: User skal kunne oprettes med alle properties
     /// </summary>
     [Test]
-    public void User_OprettetMedAlleProperties_HarAllePropertiesSæt()
+    public void User_CreatedWithAllProperties_SetsAllProperties()
     {
         // ARRANGE & ACT
         var user = new User

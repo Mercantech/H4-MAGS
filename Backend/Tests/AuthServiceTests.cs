@@ -70,7 +70,7 @@ public class AuthServiceTests
     /// ASSERT: Vi verificerer at hash er produceret
     /// </summary>
     [Test]
-    public void HashPassword_MedGyldigtPassword_ReturnererHash()
+    public void HashPassword_WithValidPassword_ReturnsHash()
     {
         // ARRANGE: Forbered test data
         var password = "MitSikrePassword123!";
@@ -89,7 +89,7 @@ public class AuthServiceTests
     /// Dette er vigtigt for sikkerhed - hver hash skal have unik salt
     /// </summary>
     [Test]
-    public void HashPassword_SammePasswordToGange_ReturnererForskelligeHashes()
+    public void HashPassword_SamePasswordTwice_ReturnsDifferentHashes()
     {
         // ARRANGE
         var password = "SammePassword123";
@@ -107,7 +107,7 @@ public class AuthServiceTests
     /// Test 3: HashPassword skal håndtere tomme/null passwords
     /// </summary>
     [Test]
-    public void HashPassword_MedTomtPassword_ReturnererHash()
+    public void HashPassword_WithEmptyPassword_ReturnsHash()
     {
         // ARRANGE
         var password = "";
@@ -133,7 +133,7 @@ public class AuthServiceTests
     /// ASSERT: Verificer at resultatet er korrekt
     /// </summary>
     [Test]
-    public async Task VerifyPasswordAsync_MedKorrektPassword_ReturnererTrue()
+    public async Task VerifyPasswordAsync_WithCorrectPassword_ReturnsTrue()
     {
         // ARRANGE: Opret password og hash det
         var password = "MitPassword123";
@@ -150,7 +150,7 @@ public class AuthServiceTests
     /// Test 5: VerifyPasswordAsync skal afvise forkert password
     /// </summary>
     [Test]
-    public async Task VerifyPasswordAsync_MedForkertPassword_ReturnererFalse()
+    public async Task VerifyPasswordAsync_WithIncorrectPassword_ReturnsFalse()
     {
         // ARRANGE
         var korrektPassword = "KorrektPassword123";
@@ -168,7 +168,7 @@ public class AuthServiceTests
     /// Test 6: VerifyPasswordAsync skal håndtere null/empty hash
     /// </summary>
     [Test]
-    public async Task VerifyPasswordAsync_MedNullHash_ReturnererFalse()
+    public async Task VerifyPasswordAsync_WithNullHash_ReturnsFalse()
     {
         // ARRANGE
         var password = "NogetPassword123";
@@ -185,7 +185,7 @@ public class AuthServiceTests
     /// Test 7: VerifyPasswordAsync skal håndtere ugyldig hash format
     /// </summary>
     [Test]
-    public async Task VerifyPasswordAsync_MedUgyldigHashFormat_ReturnererFalse()
+    public async Task VerifyPasswordAsync_WithInvalidHashFormat_ReturnsFalse()
     {
         // ARRANGE
         var password = "NogetPassword123";
@@ -209,7 +209,7 @@ public class AuthServiceTests
     /// Men det er tættere på integration test - vi tester faktisk database interaktion
     /// </summary>
     [Test]
-    public async Task RegisterAsync_MedNytBrugernavnOgEmail_ReturnererBruger()
+    public async Task RegisterAsync_WithNewUsernameAndEmail_ReturnsUser()
     {
         // ARRANGE
         var username = "testbruger";
@@ -236,7 +236,7 @@ public class AuthServiceTests
     /// Test 9: RegisterAsync skal normalisere username og email til lowercase
     /// </summary>
     [Test]
-    public async Task RegisterAsync_MedStorBogstaver_NormalisererTilLowercase()
+    public async Task RegisterAsync_WithUppercaseInput_NormalizesToLowercase()
     {
         // ARRANGE
         var username = "TestBruger";
@@ -255,7 +255,7 @@ public class AuthServiceTests
     /// Test 10: RegisterAsync skal afvise duplikat username
     /// </summary>
     [Test]
-    public async Task RegisterAsync_MedEksisterendeBrugernavn_ReturnererNull()
+    public async Task RegisterAsync_WithExistingUsername_ReturnsNull()
     {
         // ARRANGE: Opret først en bruger
         await _authService.RegisterAsync("eksisterende", "test1@example.com", "Password123", UserRole.Student);
@@ -271,7 +271,7 @@ public class AuthServiceTests
     /// Test 11: RegisterAsync skal afvise duplikat email
     /// </summary>
     [Test]
-    public async Task RegisterAsync_MedEksisterendeEmail_ReturnererNull()
+    public async Task RegisterAsync_WithExistingEmail_ReturnsNull()
     {
         // ARRANGE
         await _authService.RegisterAsync("bruger1", "samme@example.com", "Password123", UserRole.Student);
@@ -291,7 +291,7 @@ public class AuthServiceTests
     /// Test 12: LoginAsync skal logge ind med korrekt password
     /// </summary>
     [Test]
-    public async Task LoginAsync_MedKorrektPassword_ReturnererBruger()
+    public async Task LoginAsync_WithCorrectPassword_ReturnsUser()
     {
         // ARRANGE: Opret bruger først
         var username = "loginbruger";
@@ -313,7 +313,7 @@ public class AuthServiceTests
     /// Test 13: LoginAsync skal afvise forkert password
     /// </summary>
     [Test]
-    public async Task LoginAsync_MedForkertPassword_ReturnererNull()
+    public async Task LoginAsync_WithIncorrectPassword_ReturnsNull()
     {
         // ARRANGE
         var username = "loginbruger2";
@@ -331,7 +331,7 @@ public class AuthServiceTests
     /// Test 14: LoginAsync skal kunne logge ind med email også
     /// </summary>
     [Test]
-    public async Task LoginAsync_MedEmailIStedetForUsername_ReturnererBruger()
+    public async Task LoginAsync_WithEmailInsteadOfUsername_ReturnsUser()
     {
         // ARRANGE
         var email = "email@example.com";
