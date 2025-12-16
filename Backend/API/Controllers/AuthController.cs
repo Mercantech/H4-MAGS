@@ -1,5 +1,6 @@
 using API.Data;
 using API.DTOs.Auth;
+using API.Extensions;
 using API.Models;
 using API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -523,6 +524,86 @@ public class AuthController : ControllerBase
 
         _logger.LogInformation("Password opdateret for bruger ID: {UserId}", userId);
         return Ok(new { message = "Password opdateret succesfuldt" });
+    }
+
+    /// <summary>
+    /// Hent OAuth credentials for elever
+    /// </summary>
+    /// <remarks>
+    /// Auth: Protected med password - Returnerer OAuth credentials fra konfiguration.
+    /// Password skal sendes som query parameter eller header "X-Credentials-Password".
+    /// </remarks>
+    [HttpGet("oauth-credentials")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(OAuthCredentialsDto), 200)]
+    [ProducesResponseType(401)]
+    public ActionResult<OAuthCredentialsDto> GetOAuthCredentials([FromQuery] string? password, [FromHeader(Name = "X-Credentials-Password")] string? headerPassword)
+    {
+        // Hent password fra konfiguration
+        var requiredPassword = _configuration.GetConfigValue("OAuth:CredentialsPassword", "OAuth__CredentialsPassword");
+        
+        if (string.IsNullOrEmpty(requiredPassword))
+        {
+            _logger.LogWarning("OAuth credentials password ikke konfigureret");
+            return Unauthorized(new { message = "Credentials endpoint ikke konfigureret" });
+        }
+
+        // Tjek password fra query parameter eller header
+        var providedPassword = password ?? headerPassword;
+        
+        if (string.IsNullOrEmpty(providedPassword) || providedPassword != requiredPassword)
+        {
+            _logger.LogWarning("Forkert password forsøgt ved hentning af OAuth credentials");
+            return Unauthorized(new { message = "Ugyldigt password" });
+        }
+
+        // Hent base URL fra request
+        var scheme = Request.Headers["X-Forwarded-Proto"].FirstOrDefault() 
+                     ?? Request.Headers["X-Forwarded-Scheme"].FirstOrDefault()
+                     ?? (Request.IsHttps ? "https" : Request.Scheme);
+        
+        // Force HTTPS i production
+        if (Request.Host.Host.Contains("mercantec.tech"))
+        {
+            scheme = "https";
+        }
+        
+        var baseUrl = $"{scheme}://{Request.Host}/api";
+
+        // Hent Google credentials
+        var googleClientId = _configuration.GetConfigValue("OAuth:Google:ClientId", "OAuth__Google__ClientId") 
+                             ?? _configuration.GetConfigValue("Google:ClientId", "Google__ClientId") 
+                             ?? string.Empty;
+
+        // Hent GitHub credentials
+        var githubClientId = _configuration.GetConfigValue("OAuth:GitHub:ClientId", "OAuth__GitHub__ClientId") 
+                             ?? string.Empty;
+        
+        var githubCallbackUrl = $"{scheme}://{Request.Host}/api/auth/github/callback";
+
+        // Byg response
+        var credentials = new OAuthCredentialsDto
+        {
+            Google = new GoogleCredentialsDto
+            {
+                ClientId = googleClientId
+            },
+            GitHub = new GitHubCredentialsDto
+            {
+                ClientId = githubClientId,
+                CallbackUrl = githubCallbackUrl,
+                Scope = "user:email"
+            },
+            Api = new ApiInfoDto
+            {
+                BaseUrl = baseUrl,
+                ProductionBaseUrl = "https://kahoot-api.mercantec.tech/api",
+                DevelopmentBaseUrl = "https://localhost:7258/api"
+            }
+        };
+
+        _logger.LogInformation("OAuth credentials returneret succesfuldt");
+        return Ok(credentials);
     }
 }
 
