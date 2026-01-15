@@ -94,35 +94,15 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// Add CORS support for Flutter app
+// Add CORS support - Allow all origins
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFlutterApp", policy =>
+    options.AddPolicy("AllowAll", policy =>
     {
-        policy.WithOrigins(
-                "https://h4-flutter.mercantec.tech",
-                "https://h4-api.mercantec.tech",
-                "https://kahoot.mercantec.tech"
-            )
-            .AllowAnyMethod()               // Allow GET, POST, PUT, DELETE, etc.
-            .AllowAnyHeader()               // Allow any headers
-            .AllowCredentials();            // Allow cookies/auth headers
-    });
-
-    // Development policy - more permissive for local development
-    options.AddPolicy("AllowAllLocalhost", policy =>
-    {
-        policy.SetIsOriginAllowed(origin =>
-            {
-                // Tillad alle localhost og 127.0.0.1 origins med alle porte
-                var uri = new Uri(origin);
-                return uri.Host == "localhost" ||
-                       uri.Host == "127.0.0.1" ||
-                       uri.Host == "0.0.0.0";
-            })
-            .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials();
+        policy.SetIsOriginAllowed(_ => true)  // Tillad alle origins
+            .AllowAnyMethod()                  // Allow GET, POST, PUT, DELETE, etc.
+            .AllowAnyHeader()                  // Allow any headers
+            .AllowCredentials();               // Allow cookies/auth headers
     });
 });
 
@@ -171,7 +151,7 @@ app.MapScalarApiReference(options =>
 
 
 // Enable CORS - SKAL være før UseAuthentication
-app.UseCors(app.Environment.IsDevelopment() ? "AllowAllLocalhost" : "AllowFlutterApp");
+app.UseCors("AllowAll");
 
 // Request logging middleware (kun i development)
 if (app.Environment.IsDevelopment())
