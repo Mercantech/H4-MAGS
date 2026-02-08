@@ -34,5 +34,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Backend.ServiceDefaults\Backend.ServiceDefaults.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="EmailTemplates\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
 </Project>

@@ -58,6 +58,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     .EnableSensitiveDataLogging(builder.Environment.IsDevelopment())
     .EnableServiceProviderCaching());
 
+// Mail-konfiguration (Gmail SMTP). Password kan sættes via Mail__Password eller User Secrets.
+builder.Services.Configure<MailSettings>(builder.Configuration.GetSection(MailSettings.SectionName));
+builder.Services.AddScoped<IMailService, MailService>();
+
 // Add custom services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();

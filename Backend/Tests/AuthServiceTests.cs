@@ -25,6 +25,7 @@ namespace Tests;
 public class AuthServiceTests
 {
     private Mock<ILogger<AuthService>> _mockLogger = null!;
+    private Mock<IMailService> _mockMailService = null!;
     private ApplicationDbContext _context = null!;
     private AuthService _authService = null!;
 
@@ -37,6 +38,10 @@ public class AuthServiceTests
     {
         // ARRANGE: Opret mock logger
         _mockLogger = new Mock<ILogger<AuthService>>();
+        _mockMailService = new Mock<IMailService>();
+        _mockMailService
+            .Setup(m => m.SendWelcomeEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         // ARRANGE: Opret InMemory database (ikke en rigtig database - kun i hukommelsen)
         // Dette gør testen hurtig og isoleret
@@ -47,7 +52,7 @@ public class AuthServiceTests
         _context = new ApplicationDbContext(options);
 
         // ARRANGE: Opret service med dependencies
-        _authService = new AuthService(_context, _mockLogger.Object);
+        _authService = new AuthService(_context, _mockLogger.Object, _mockMailService.Object);
     }
 
     /// <summary>

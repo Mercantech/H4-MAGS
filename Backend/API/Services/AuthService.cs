@@ -49,13 +49,16 @@ public class AuthService : IAuthService
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<AuthService> _logger;
+    private readonly IMailService _mailService;
 
     public AuthService(
-        ApplicationDbContext context, 
-        ILogger<AuthService> logger)
+        ApplicationDbContext context,
+        ILogger<AuthService> logger,
+        IMailService mailService)
     {
         _context = context;
         _logger = logger;
+        _mailService = mailService;
     }
 
     public async Task<User?> RegisterAsync(string username, string email, string password, UserRole role)
@@ -90,6 +93,16 @@ public class AuthService : IAuthService
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
+
+        // Send velkomstmail (fejl påvirker ikke registreringen)
+        try
+        {
+            await _mailService.SendWelcomeEmailAsync(user.Email, user.Username);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Velkomstmail kunne ikke sendes til {Email}", user.Email);
+        }
 
         return user;
     }
