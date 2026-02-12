@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 namespace API.DTOs.Auth;
 
 /// <summary>
-/// Generisk DTO for OAuth login (alle providers)
+/// [Google Auth] Generisk DTO for OAuth login – body til POST /api/auth/oauth-login (provider + accessToken).
 /// </summary>
 public class OAuthLoginDto
 {

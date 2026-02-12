@@ -21,7 +21,20 @@ public class SendDemoMailRequest
     public string? Subject { get; set; }
 
     /// <summary>
-    /// Valgfri HTML-body. Hvis tom sendes en simpel testmail.
+    /// Valgfri HTML-body. Hvis tom og ingen Template angives sendes velkomst-skabelonen med demo-bruger.
     /// </summary>
     public string? Body { get; set; }
+
+    /// <summary>
+    /// Valgfri skabelon til demo. "Welcome" = velkomstmail-skabelon (EmailTemplates/WelcomeEmail.html).
+    /// Når angivet bruges skabelonen og Body ignoreres.
+    /// </summary>
+    [MaxLength(50)]
+    public string? Template { get; set; }
+
+    /// <summary>
+    /// Brugernavn til skabelon-placeholders (fx {{Username}}). Bruges ved Template = "Welcome". Default: "DemoBruger".
+    /// </summary>
+    [MaxLength(200)]
+    public string? TemplateUsername { get; set; }
 }

@@ -1,7 +1,7 @@
 namespace API.Models;
 
 /// <summary>
-/// Repræsenterer en ekstern identitet (SSO provider) knyttet til en bruger.
+/// [Google Auth] Repræsenterer en ekstern identitet (SSO provider, fx Google) knyttet til en bruger.
 /// Tillader en bruger at have flere authentication metoder (f.eks. både password og Google).
 /// </summary>
 public class ExternalIdentity : BaseEntity

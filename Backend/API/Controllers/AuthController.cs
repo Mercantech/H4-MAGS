@@ -214,7 +214,7 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Generisk OAuth login - Virker med alle providers (Google, Microsoft, GitHub, etc.)
+    /// [Google Auth] Generisk OAuth login - Virker med alle providers (Google, Microsoft, GitHub, etc.)
     /// </summary>
     /// <remarks>
     /// Auth: Anonymous - Login med OAuth access token fra hvilken som helst provider.
@@ -527,7 +527,7 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Hent OAuth credentials for elever
+    /// [Google Auth] Hent OAuth credentials for elever (inkl. Google ClientId)
     /// </summary>
     /// <remarks>
     /// Auth: Protected med password - Returnerer OAuth credentials fra konfiguration.

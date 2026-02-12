@@ -12,10 +12,7 @@ class AuthRemoteDataSource {
   AuthRemoteDataSource({required ApiClient apiClient})
       : _apiClient = apiClient;
 
-  /// Generisk OAuth login - Virker med alle providers (Google, Microsoft, GitHub, etc.)
-  /// 
-  /// Bruger det nye generiske /oauth-login endpoint.
-  /// Anbefalet metode til OAuth login.
+  /// [Google Auth] Generisk OAuth login – POST /auth/oauth-login med provider + accessToken (Google, GitHub, etc.).
   Future<ApiResult<AuthResponseModel>> loginWithOAuth({
     required String provider,
     required String accessToken,

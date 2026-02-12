@@ -3,7 +3,7 @@ using API.Models;
 namespace API.Services;
 
 /// <summary>
-/// Generisk OAuth service der håndterer alle OAuth 2.0 / OpenID Connect providers
+/// [Google Auth] Generisk OAuth service – bruges af AuthController.OAuthLogin til Google (og andre providers).
 /// </summary>
 public interface IOAuthService
 {

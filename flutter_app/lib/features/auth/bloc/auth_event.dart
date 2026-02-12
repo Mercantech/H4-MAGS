@@ -10,7 +10,7 @@ abstract class AuthEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Login med Google
+/// [Google Auth] Event der trigger Google login (AuthBloc → loginWithGoogle).
 class LoginWithGoogleEvent extends AuthEvent {
   const LoginWithGoogleEvent();
 }

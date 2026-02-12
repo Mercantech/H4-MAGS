@@ -1,7 +1,4 @@
-/// Google Sign-In konfiguration
-/// 
-/// Tilføj din Google Web Client ID her.
-/// Du finder Client ID i Google Cloud Console under OAuth 2.0 Client IDs.
+/// [Google Auth] Google Sign-In konfiguration – Web Client ID bruges af GoogleSignIn i AuthRepositoryImpl.
 class GoogleConfig {
   /// Google Web Application Client ID
   /// 

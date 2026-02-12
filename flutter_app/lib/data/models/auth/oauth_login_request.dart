@@ -1,7 +1,4 @@
-/// Generisk OAuth login request model
-/// 
-/// Bruges til at sende OAuth access token til backend
-/// Virker med alle providers (Google, Microsoft, GitHub, etc.)
+/// [Google Auth] Request model til POST /auth/oauth-login – provider (fx "Google") + accessToken.
 class OAuthLoginRequest {
   /// OAuth provider navn (f.eks. "Google", "Microsoft", "GitHub")
   final String provider;

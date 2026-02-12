@@ -2,21 +2,22 @@
 
 Denne guide forklarer hvordan Google Sign-In er implementeret til Flutter Web app.
 
-## Arkitektur
+**→ Fuld oversigt over filer og flow:** se **[docs/GOOGLE_AUTH.md](../../../../docs/GOOGLE_AUTH.md)** (i repo-roden). Alle relevante filer og funktioner er markeret med `[Google Auth]` i koden.
 
-### Flow
+## Arkitektur (nuværende flow – access token)
+
 1. **Flutter Web App**: Brugeren klikker på "Login med Google"
-2. **Google Sign-In SDK**: Håndterer Google login flow og returnerer ID token
-3. **Flutter Repository**: Sender ID token til backend API
-4. **Backend API**: Verificerer Google token (med audience validation) og opretter/henter bruger
-5. **Backend API**: Genererer JWT token og returnerer det til Flutter app
-6. **Flutter App**: Gemmer JWT token og bruger det til alle fremtidige API calls
+2. **Google Sign-In SDK**: Håndterer Google login og returnerer **access token** (på Web)
+3. **Flutter Repository**: Sender access token til backend: `POST /api/auth/oauth-login` med `{ "provider": "Google", "accessToken": "..." }`
+4. **Backend API**: Kalder Google UserInfo API med token, finder/opretter bruger og `ExternalIdentity`
+5. **Backend API**: Genererer JWT + refresh token og returnerer `AuthResponseDto`
+6. **Flutter App**: Gemmer JWT og bruger det til alle fremtidige API calls
 
 ### Vigtigt
-- **Google håndterer kun login/oprettelse** - Google ID token bruges kun til at verificere brugerens identitet
-- **JWT systemet styrer adgang og tilladelser** - Alle API calls bruger dit eget JWT token, ikke Google token
-- **Brugere oprettes automatisk** - Hvis en Google bruger ikke eksisterer, oprettes de automatisk med Student rolle
-- **Kun Web Application client** - Da du kun bruger Flutter Web, skal du kun oprette én OAuth client
+- **Google håndterer kun login** – access token bruges kun til at hente brugerinfo (email, navn, billede)
+- **JWT styrer adgang** – alle API-kald bruger backend JWT, ikke Google-token
+- **Brugere oprettes automatisk** – nye Google-brugere får Student og en `ExternalIdentity` med provider "Google"
+- **Kun Web Application client** – én OAuth Web client i Google Cloud, samme Client ID i Flutter og backend
 
 ## Setup
 

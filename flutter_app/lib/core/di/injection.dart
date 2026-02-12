@@ -106,6 +106,7 @@ Future<void> setupDependencyInjection() async {
     ),
   );
 
+  // [Google Auth] AuthRepositoryImpl får GoogleConfig.webClientId til GoogleSignIn
   getIt.registerLazySingleton<AuthRepositoryImpl>(
     () => AuthRepositoryImpl(
       remoteDataSource: getIt<AuthRemoteDataSource>(),

@@ -6,7 +6,7 @@ import 'auth_state.dart';
 
 /// Authentication BLoC
 /// 
-/// Håndterer authentication state management og Google Sign-In flow.
+/// [Google Auth] Håndterer authentication state management og Google Sign-In flow (LoginWithGoogleEvent → loginWithGoogle).
 /// Gemmer tokens i secure storage for persistence efter reload.
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepositoryImpl _authRepository;
@@ -26,7 +26,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<UpdatePasswordEvent>(_onUpdatePassword);
   }
 
-  /// Login med Google
+  /// [Google Auth] Login med Google – kalder repository.loginWithGoogle(), gemmer tokens, emitter AuthAuthenticated.
   Future<void> _onLoginWithGoogle(
     LoginWithGoogleEvent event,
     Emitter<AuthState> emit,

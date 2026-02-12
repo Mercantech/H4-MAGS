@@ -1,0 +1,28 @@
+meta {
+  name: MailDemo
+  type: http
+  seq: 1
+}
+
+post {
+  url: https://localhost:7258/api/Mail/demo
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjQiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoibWF0aGlhcyIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL2VtYWlsYWRkcmVzcyI6Im1hdGhpYXNnc3RlZW5iZXJnQGdtYWlsLmNvbSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IlN0dWRlbnQiLCJqdGkiOiJmYWMwYTdmYy1kZmE0LTRkYWItODAxNS1lNWE5YzZlYTE4ZTUiLCJhdXRoX3Byb3ZpZGVyIjoiT2xkU2Nob29sIiwiZXhwIjoxNzcwNzU0NzEwLCJpc3MiOiJINC1NQUdTLUFQSSIsImF1ZCI6Ikg0LU1BR1MtQ2xpZW50In0.KoFyqkICfYUPwjdMs9XWIMOWgBFDiRqd72-u21UtXJc
+}
+
+body:json {
+  {
+    "toEmail": "mathiasgsteenberg@gmail.com",
+    "subject": "string",
+    "body": "string"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

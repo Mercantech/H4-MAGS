@@ -10,9 +10,7 @@ import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import 'password_update_form.dart';
 
-/// Test side til Google SSO
-/// 
-/// Denne side giver dig mulighed for at teste Google Sign-In integrationen.
+/// [Google Auth] Test side til Google SSO – viser bl.a. "Login med Google"-knap som sender LoginWithGoogleEvent.
 class AuthTestPage extends StatelessWidget {
   const AuthTestPage({super.key});
 

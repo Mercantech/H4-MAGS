@@ -8,7 +8,7 @@ using System.Text.Json.Serialization;
 namespace API.Services;
 
 /// <summary>
-/// Generisk OAuth service der håndterer alle OAuth 2.0 / OpenID Connect providers
+/// [Google Auth] Generisk OAuth service der håndterer alle OAuth 2.0 / OpenID Connect providers (Google, Microsoft, GitHub)
 /// </summary>
 public class OAuthService : IOAuthService
 {
@@ -35,7 +35,7 @@ public class OAuthService : IOAuthService
     {
         var providers = new Dictionary<string, OAuthProviderConfiguration>();
         
-        // Load Google
+        // [Google Auth] Load Google
         var googleClientId = _configuration.GetConfigValue("OAuth:Google:ClientId", "OAuth__Google__ClientId");
         if (!string.IsNullOrEmpty(googleClientId))
         {
@@ -111,6 +111,8 @@ public class OAuthService : IOAuthService
         return null;
     }
 
+    /// <inheritdoc />
+    /// <remarks>[Google Auth] Kalder for Google: https://www.googleapis.com/oauth2/v2/userinfo med Bearer token.</remarks>
     public async Task<OAuthUserInfo?> GetUserInfoFromAccessTokenAsync(string accessToken, string providerName)
     {
         if (!_providers.TryGetValue(providerName, out var providerConfig))
@@ -321,6 +323,8 @@ public class OAuthService : IOAuthService
         }
     }
 
+    /// <inheritdoc />
+    /// <remarks>[Google Auth] Finder/opretter User og ExternalIdentity (provider=Google); understøtter account linking på email.</remarks>
     public async Task<User?> GetOrCreateUserFromOAuthAsync(OAuthUserInfo userInfo, string providerName)
     {
         if (string.IsNullOrEmpty(userInfo.Email) || string.IsNullOrEmpty(userInfo.ProviderUserId))

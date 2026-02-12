@@ -7,7 +7,7 @@ namespace API.Services;
 
 /// <summary>
 /// Konfiguration for udgående mail (Gmail SMTP).
-/// Brug et Google App Password – ikke din almindelige Gmail-adgangskode.
+/// Brug et Google App Password – ikke jeres almindelige Gmail-adgangskode.
 /// </summary>
 public class MailSettings
 {
@@ -29,9 +29,9 @@ public interface IMailService
     Task SendWelcomeEmailAsync(string toEmail, string username, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Sender en testmail (til demo-endpoint). Valgfri emne og HTML-body.
+    /// Sender en testmail (til demo-endpoint). Valgfri emne, HTML-body eller skabelon (fx "Welcome").
     /// </summary>
-    Task SendTestEmailAsync(string toEmail, string? subject = null, string? htmlBody = null, CancellationToken cancellationToken = default);
+    Task SendTestEmailAsync(string toEmail, string? subject = null, string? htmlBody = null, string? templateName = null, string? templateUsername = null, CancellationToken cancellationToken = default);
 }
 
 public class MailService : IMailService
@@ -62,11 +62,7 @@ public class MailService : IMailService
         var fromEmail = string.IsNullOrWhiteSpace(_settings.FromEmail) ? _settings.UserName : _settings.FromEmail;
         var fromName = string.IsNullOrWhiteSpace(_settings.FromName) ? "Kahoot.Mercantec.tech" : _settings.FromName;
 
-        using var client = new SmtpClient(_settings.Host, _settings.Port)
-        {
-            EnableSsl = true,
-            Credentials = new NetworkCredential(_settings.UserName, _settings.Password)
-        };
+        using var client = CreateSmtpClient();
 
         var htmlBody = await BuildWelcomeEmailFromTemplateAsync(username, fromName, cancellationToken)
             ?? BuildWelcomeEmailHtml(username, fromName);
@@ -93,7 +89,7 @@ public class MailService : IMailService
     }
 
     /// <inheritdoc />
-    public async Task SendTestEmailAsync(string toEmail, string? subject = null, string? htmlBody = null, CancellationToken cancellationToken = default)
+    public async Task SendTestEmailAsync(string toEmail, string? subject = null, string? htmlBody = null, string? templateName = null, string? templateUsername = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(_settings.UserName) || string.IsNullOrWhiteSpace(_settings.Password))
         {
@@ -103,15 +99,26 @@ public class MailService : IMailService
         var fromEmail = string.IsNullOrWhiteSpace(_settings.FromEmail) ? _settings.UserName : _settings.FromEmail;
         var fromName = string.IsNullOrWhiteSpace(_settings.FromName) ? "Kahoot.Mercantec.tech" : _settings.FromName;
         var subj = string.IsNullOrWhiteSpace(subject) ? "Testmail fra Kahoot.Mercantec.tech 🎮" : subject;
-        var body = string.IsNullOrWhiteSpace(htmlBody)
-            ? "<p style=\"font-family:sans-serif;\">Dette er en testmail fra Kahoot.Mercantec.tech. Mail-service kører korrekt.</p>"
-            : htmlBody;
 
-        using var client = new SmtpClient(_settings.Host, _settings.Port)
+        string body;
+        var useWelcomeTemplate = string.Equals(templateName, "Welcome", StringComparison.OrdinalIgnoreCase)
+            || (string.IsNullOrWhiteSpace(templateName) && string.IsNullOrWhiteSpace(htmlBody));
+        if (useWelcomeTemplate)
         {
-            EnableSsl = true,
-            Credentials = new NetworkCredential(_settings.UserName, _settings.Password)
-        };
+            var username = string.IsNullOrWhiteSpace(templateUsername) ? "DemoBruger" : templateUsername;
+            body = await BuildWelcomeEmailFromTemplateAsync(username, fromName, cancellationToken)
+                ?? BuildWelcomeEmailHtml(username, fromName);
+        }
+        else if (!string.IsNullOrWhiteSpace(htmlBody))
+        {
+            body = htmlBody;
+        }
+        else
+        {
+            body = "<p style=\"font-family:sans-serif;\">Dette er en testmail fra Kahoot.Mercantec.tech. Mail-service kører korrekt.</p>";
+        }
+
+        using var client = CreateSmtpClient();
 
         var mailMessage = new MailMessage
         {
@@ -124,6 +131,18 @@ public class MailService : IMailService
 
         await client.SendMailAsync(mailMessage, cancellationToken);
         _logger.LogInformation("Testmail sendt til {Email}", toEmail);
+    }
+
+    private SmtpClient CreateSmtpClient()
+    {
+        var user = (_settings.UserName ?? "").Trim();
+        var pass = (_settings.Password ?? "").Trim();
+        return new SmtpClient(_settings.Host, _settings.Port)
+        {
+            EnableSsl = true,
+            UseDefaultCredentials = false,
+            Credentials = new NetworkCredential(user, pass)
+        };
     }
 
     /// <summary>

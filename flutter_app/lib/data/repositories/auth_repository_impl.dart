@@ -10,7 +10,7 @@ import '../../core/config/app_config.dart';
 
 /// Implementation of authentication repository
 /// 
-/// Håndterer Google Sign-In og API calls til backend.
+/// [Google Auth] Håndterer Google Sign-In (loginWithGoogle) og sender access token til POST /auth/oauth-login.
 class AuthRepositoryImpl {
   final AuthRemoteDataSource _remoteDataSource;
   final GoogleSignIn _googleSignIn;
@@ -31,19 +31,8 @@ class AuthRepositoryImpl {
           hostedDomain: null, // Tillad alle domæner
         );
 
-  /// Login med Google via generisk OAuth løsning
-  /// 
-  /// Bruger den nye generiske OAuth endpoint som virker perfekt med access tokens.
-  /// Flow:
-  /// 1. Prøver signInSilently() først (virker hvis bruger allerede er logget ind)
-  /// 2. Hvis det fejler, logger vi ud og bruger signIn()
-  /// 3. Henter access token fra Google (det vi får på Flutter Web)
-  /// 4. Sender access token til generisk /oauth-login endpoint med provider="Google"
-  /// 
-  /// Den generiske løsning håndterer automatisk:
-  /// - Hentning af brugerinfo fra Google API
-  /// - Account linking til eksisterende konti
-  /// - Oprettelse af nye brugere
+  /// [Google Auth] Login med Google via generisk OAuth løsning.
+  /// Flow: signInSilently() eller signIn() → access token → POST /auth/oauth-login med provider="Google".
   Future<ApiResult<AuthResponseModel>> loginWithGoogle() async {
     try {
       GoogleSignInAccount? googleUser;

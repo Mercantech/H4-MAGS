@@ -7,7 +7,6 @@ namespace API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin")]
 public class MailController : ControllerBase
 {
     private readonly IMailService _mailService;
@@ -33,7 +32,9 @@ public class MailController : ControllerBase
                 request.ToEmail,
                 request.Subject,
                 request.Body,
-                cancellationToken);
+                request.Template,
+                request.TemplateUsername,
+                cancellationToken: cancellationToken);
             return Ok(new { message = "Testmail sendt.", toEmail = request.ToEmail });
         }
         catch (InvalidOperationException ex)
