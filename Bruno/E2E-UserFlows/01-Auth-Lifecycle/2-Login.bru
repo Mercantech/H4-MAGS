@@ -19,9 +19,11 @@ body:json {
 
 script:post-response {
   if (res.status === 200) {
-    const d = res.body;
-    if (d?.token) bru.setEnvVar("authToken", d.token);
-    if (d?.refreshToken) bru.setEnvVar("refreshToken", d.refreshToken);
+    const d = typeof res.body === "string" ? JSON.parse(res.body) : (res.body || {});
+    const token = d?.token ?? d?.Token;
+    const refreshToken = d?.refreshToken ?? d?.RefreshToken;
+    if (token) bru.setEnvVar("authToken", String(token));
+    if (refreshToken) bru.setEnvVar("refreshToken", String(refreshToken));
   }
 }
 
