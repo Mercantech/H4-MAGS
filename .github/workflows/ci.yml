@@ -56,7 +56,7 @@ jobs:
 
       - name: Run Bruno collection
         working-directory: Bruno
-        run: bru run --env Kahoot --env-var "baseUrl=${{ env.API_BASE_URL }}" --reporter junit bruno-results.xml
+        run: bru run E2E-UserFlows --env Kahoot --env-var "baseUrl=${{ env.API_BASE_URL }}" --reporter-junit bruno-results.xml
 
       - name: Upload Bruno results (JUnit)
         if: always()
