@@ -2,17 +2,7 @@ meta {
   name: 5-Logout
   type: http
   seq: 5
-}
-
-script:pre-request {
-  const path = require("path");
-  const fs = require("fs");
-  const authFile = path.join(process.cwd(), "E2E-UserFlows", "01-Auth-Lifecycle", ".e2e-auth.json");
-  if (fs.existsSync(authFile)) {
-    const data = JSON.parse(fs.readFileSync(authFile, "utf8"));
-    if (data.authToken) bru.setEnvVar("authToken", data.authToken);
-    if (data.refreshToken) bru.setEnvVar("refreshToken", data.refreshToken);
-  }
+  tags: skip-ci
 }
 
 post {

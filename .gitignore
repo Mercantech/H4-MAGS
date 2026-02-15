@@ -89,10 +89,6 @@ appsettings.json
 # Service account files
 svc-keyfile.json
 
-# Bruno E2E runtime (token cache, ikke committes)
-.e2e-auth.json
-Bruno/E2E-UserFlows/**/.e2e-auth.json
-
 # Lockfiles
 Podfile.lock
 pubspec.lock
