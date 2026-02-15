@@ -1,0 +1,34 @@
+meta {
+  name: 4-JoinSession
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/QuizSession/join
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "sessionPin": "{{sessionPin}}",
+    "nickname": "E2E-Student"
+  }
+}
+
+script:post-response {
+  if (res.status === 200 || res.status === 201) {
+    const d = res.body;
+    if (d?.id) bru.setEnvVar("participantId", d.id);
+  }
+}
+
+tests {
+  test("Status er 200 eller 201", function() {
+    expect(res.getStatus()).to.be.oneOf([200, 201]);
+  });
+  test("Response indeholder deltager id", function() {
+    expect(res.getBody()).to.have.property("id");
+  });
+}

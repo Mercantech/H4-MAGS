@@ -1,0 +1,36 @@
+meta {
+  name: 3-CreateSession
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/QuizSession
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "quizId": {{createdQuizId}}
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    const d = res.body;
+    if (d?.id) bru.setEnvVar("sessionId", d.id);
+    if (d?.sessionPin) bru.setEnvVar("sessionPin", d.sessionPin);
+  }
+}
+
+tests {
+  test("Status er 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  test("Response indeholder sessionPin og id", function() {
+    const d = res.getBody();
+    expect(d).to.have.property("sessionPin");
+    expect(d).to.have.property("id");
+  });
+}

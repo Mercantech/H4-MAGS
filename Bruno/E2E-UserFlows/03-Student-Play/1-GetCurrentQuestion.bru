@@ -1,0 +1,31 @@
+meta {
+  name: 1-GetCurrentQuestion
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/Participant/session/{{sessionId}}/current-question
+  body: none
+  auth: none
+}
+
+script:post-response {
+  if (res.status === 200) {
+    const d = res.body;
+    if (d?.id) bru.setEnvVar("currentQuestionId", d.id);
+    if (d?.answers?.length > 0) bru.setEnvVar("currentAnswerId", d.answers[0].id);
+  }
+}
+
+tests {
+  test("Status er 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("Response indeholder spørgsmål og svar", function() {
+    const d = res.getBody();
+    expect(d).to.have.property("id");
+    expect(d).to.have.property("answers");
+    expect(d.answers.length).to.be.greaterThan(0);
+  });
+}

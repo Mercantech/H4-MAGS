@@ -1,0 +1,10 @@
+meta {
+  name: 02-Teacher-Quiz-Session
+  seq: 2
+}
+
+docs {
+  Flow: Login → Opret quiz → Opret session → Join (én deltager) → Start session → Hent session via PIN.
+  Kræver: e2eEmail, e2ePassword, createdUserId fra 01 (kør Login igen efter logout).
+  Sætter: authToken, createdQuizId, sessionId, sessionPin, participantId (til flow 03).
+}

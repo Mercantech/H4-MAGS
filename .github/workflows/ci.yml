@@ -1,0 +1,66 @@
+# CI: Unit tests (Backend) + Bruno API tests mod jeres deployed API
+#
+# API-URL: Bruger jeres offentlige URL (fx https://kahoot-api.mercantec.tech).
+# Du kan sætte Repository Secret "API_BASE_URL" til en anden URL (staging/prod).
+# Hvis serveren KUN er IPv6: GitHub-hosted runners har IPv4. Sørg for at URL'en
+# peger på noget der er tilgængeligt via IPv4 (fx CDN/proxy med IPv4), eller brug
+# en self-hosted runner på et netværk der kan nå serveren.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  # Override med Repository Secret "API_BASE_URL" hvis I bruger anden URL
+  API_BASE_URL: ${{ secrets.API_BASE_URL || 'https://kahoot-api.mercantec.tech' }}
+
+jobs:
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore Backend/Tests/Tests.csproj
+
+      - name: Build
+        run: dotnet build Backend/Tests/Tests.csproj --no-restore -c Release
+
+      - name: Test
+        run: dotnet test Backend/Tests/Tests.csproj --no-build -c Release --verbosity normal
+
+  api-tests:
+    name: Bruno API tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Bruno CLI
+        run: npm install -g @usebruno/cli
+
+      - name: Run Bruno collection
+        working-directory: Bruno
+        run: bru run --env Kahoot --env-var "baseUrl=${{ env.API_BASE_URL }}" --reporter junit bruno-results.xml
+
+      - name: Upload Bruno results (JUnit)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bruno-junit
+          path: Bruno/bruno-results.xml

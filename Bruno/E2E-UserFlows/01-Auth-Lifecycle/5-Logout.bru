@@ -1,0 +1,23 @@
+meta {
+  name: 5-Logout
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/auth/logout
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "refreshToken": "{{refreshToken}}"
+  }
+}
+
+tests {
+  test("Status er 200 eller 204", function() {
+    expect(res.getStatus()).to.be.oneOf([200, 204]);
+  });
+}

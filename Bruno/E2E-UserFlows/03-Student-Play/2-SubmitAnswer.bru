@@ -1,0 +1,30 @@
+meta {
+  name: 2-SubmitAnswer
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/Participant/submit-answer
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "participantId": {{participantId}},
+    "questionId": {{currentQuestionId}},
+    "answerId": {{currentAnswerId}},
+    "responseTimeMs": 2000
+  }
+}
+
+tests {
+  test("Status er 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("Response indeholder pointsEarned eller totalPoints", function() {
+    const d = res.getBody();
+    expect(d).to.have.property("message");
+  });
+}

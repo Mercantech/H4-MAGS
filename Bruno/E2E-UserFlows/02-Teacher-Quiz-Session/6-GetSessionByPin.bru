@@ -1,0 +1,20 @@
+meta {
+  name: 6-GetSessionByPin
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/QuizSession/pin/{{sessionPin}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status er 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("Session status er InProgress", function() {
+    expect(res.getBody().status).to.equal("InProgress");
+  });
+}

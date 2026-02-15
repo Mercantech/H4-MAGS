@@ -46,6 +46,19 @@ services:
     networks:
       - app-network
 
+  # Bruno CLI – kør E2E-UserFlows mod jeres API. Kør: docker compose --profile cli run bruno-cli
+  bruno-cli:
+    build:
+      context: ./Bruno
+      dockerfile: Dockerfile
+    volumes:
+      - ./Bruno:/collection
+    environment:
+      - API_BASE_URL=https://kahoot-api.mercantec.tech
+    command: ["sh", "-c", "bru run --env Kahoot --env-var \"baseUrl=$$API_BASE_URL\" E2E-UserFlows"]
+    profiles:
+      - cli
+
 networks:
   app-network:
     driver: bridge

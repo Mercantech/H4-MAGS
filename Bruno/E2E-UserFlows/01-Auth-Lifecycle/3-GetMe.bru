@@ -1,0 +1,24 @@
+meta {
+  name: 3-GetMe
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/auth/me
+  body: none
+  auth: bearer
+  token: {{authToken}}
+}
+
+tests {
+  test("Status er 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("Response indeholder bruger-id der matcher createdUserId", function() {
+    const d = res.getBody();
+    const expectedId = parseInt(bru.getEnvVar("createdUserId"), 10);
+    expect(d).to.have.property("id");
+    expect(d.id).to.equal(expectedId);
+  });
+}

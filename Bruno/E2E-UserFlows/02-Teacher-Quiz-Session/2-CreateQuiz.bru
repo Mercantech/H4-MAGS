@@ -1,0 +1,48 @@
+meta {
+  name: 2-CreateQuiz
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/Quiz
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "E2E Test Quiz",
+    "description": "Quiz til E2E user flow",
+    "userId": {{createdUserId}},
+    "questions": [
+      {
+        "text": "Hvad er 2+2?",
+        "timeLimitSeconds": 10,
+        "points": 1000,
+        "orderIndex": 1,
+        "answers": [
+          { "text": "3", "isCorrect": false, "orderIndex": 1 },
+          { "text": "4", "isCorrect": true, "orderIndex": 2 },
+          { "text": "5", "isCorrect": false, "orderIndex": 3 }
+        ]
+      }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    const d = res.body;
+    if (d?.id) bru.setEnvVar("createdQuizId", d.id);
+  }
+}
+
+tests {
+  test("Status er 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  test("Response indeholder quiz id", function() {
+    expect(res.getBody()).to.have.property("id");
+  });
+}

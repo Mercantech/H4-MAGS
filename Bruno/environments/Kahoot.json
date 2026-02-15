@@ -1,0 +1,27 @@
+{
+  "name": "Kahoot",
+  "variables": [
+    { "name": "baseUrl", "value": "https://kahoot-api.mercantec.tech", "enabled": true },
+    { "name": "authToken", "value": "", "enabled": true },
+    { "name": "authTokenStudent", "value": "", "enabled": true },
+    { "name": "authTokenTeacher", "value": "", "enabled": true },
+    { "name": "authTokenAdmin", "value": "", "enabled": true },
+    { "name": "refreshTokenStudent", "value": "", "enabled": true },
+    { "name": "refreshTokenTeacher", "value": "", "enabled": true },
+    { "name": "refreshTokenAdmin", "value": "", "enabled": true },
+    { "name": "testUsername", "value": "testuser", "enabled": true },
+    { "name": "testEmail", "value": "", "enabled": true },
+    { "name": "testPassword", "value": "", "enabled": true },
+    { "name": "createdUserId", "value": "13", "enabled": true },
+    { "name": "e2eUsername", "value": "", "enabled": true },
+    { "name": "e2eEmail", "value": "", "enabled": true },
+    { "name": "e2ePassword", "value": "", "enabled": true },
+    { "name": "refreshToken", "value": "", "enabled": true },
+    { "name": "createdQuizId", "value": "", "enabled": true },
+    { "name": "sessionId", "value": "", "enabled": true },
+    { "name": "sessionPin", "value": "", "enabled": true },
+    { "name": "participantId", "value": "", "enabled": true },
+    { "name": "currentQuestionId", "value": "", "enabled": true },
+    { "name": "currentAnswerId", "value": "", "enabled": true }
+  ]
+}

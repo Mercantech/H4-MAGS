@@ -1,0 +1,25 @@
+meta {
+  name: 3-GetLeaderboard
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/Participant/leaderboard/{{sessionId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status er 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("Leaderboard er array", function() {
+    expect(res.getBody()).to.be.an("array");
+  });
+  test("E2E-Student findes på leaderboard", function() {
+    const list = res.getBody();
+    const student = list.find(p => p.nickname === "E2E-Student");
+    expect(student).to.be.an("object");
+  });
+}
