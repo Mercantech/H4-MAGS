@@ -46,8 +46,24 @@ services:
     networks:
       - app-network
 
-  # Bruno CLI – kør E2E-UserFlows og skriv HTML-rapport. Kør: docker compose --profile cli run bruno-cli
-  # Rapport: ./reports/bruno/results.html (eller åbn via bruno-reports på port 9083)
+  # Bruno – kør E2E-UserFlows én gang ved deploy (som H2), skriv HTML til delt volume. restart: no = engang-job.
+  bruno-run-on-deploy:
+    build:
+      context: ./Bruno
+      dockerfile: Dockerfile
+    volumes:
+      - ./Bruno:/collection
+      - bruno-reports:/collection/reports
+    environment:
+      - API_BASE_URL=https://kahoot-api.mercantec.tech
+    command: ["sh", "-c", "mkdir -p /collection/reports && echo 'Venter på API...' && sleep 15 && bru run E2E-UserFlows -r --env Kahoot --env-var \"baseUrl=$$API_BASE_URL\" --reporter-html /collection/reports/results.html && echo 'Rapport skrevet til bruno-reports volume'"]
+    depends_on:
+      - backend
+    restart: "no"
+    networks:
+      - app-network
+
+  # Bruno CLI – manuel kør (fx lokalt). Kør: docker compose --profile cli run bruno-cli
   bruno-cli:
     build:
       context: ./Bruno
@@ -57,13 +73,12 @@ services:
       - bruno-reports:/collection/reports
     environment:
       - API_BASE_URL=https://kahoot-api.mercantec.tech
-    command: ["sh", "-c", "mkdir -p /collection/reports && bru run --env Kahoot --env-var \"baseUrl=$$API_BASE_URL\" E2E-UserFlows --reporter-html /collection/reports/results.html"]
+    command: ["sh", "-c", "mkdir -p /collection/reports && bru run E2E-UserFlows -r --env Kahoot --env-var \"baseUrl=$$API_BASE_URL\" --reporter-html /collection/reports/results.html"]
     profiles:
       - cli
 
-  # Server E2E-rapporten (uden profile så den startes ved normal deploy – fx i Dokploy).
-  # Bind tunnel til denne service (port 80) for fx https://kahoot-bruno.mercantec.tech
-  # Rapporten opdateres når I kører: docker compose --profile cli run bruno-cli (som job i Dokploy)
+  # Server E2E-rapporten (uden profile – startes ved deploy). Fx https://kahoot-bruno.mercantec.tech
+  # Opdateres automatisk ved deploy via bruno-run-on-deploy (som H2).
   bruno-reports:
     build:
       context: ./Bruno
