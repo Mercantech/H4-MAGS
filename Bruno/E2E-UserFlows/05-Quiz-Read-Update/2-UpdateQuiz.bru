@@ -1,0 +1,24 @@
+meta {
+  name: 2-UpdateQuiz
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/api/Quiz/{{createdQuizId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "E2E Test Quiz (opdateret)",
+    "description": "Opdateret beskrivelse fra Bruno E2E"
+  }
+}
+
+tests {
+  test("Status er 204 No Content", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}

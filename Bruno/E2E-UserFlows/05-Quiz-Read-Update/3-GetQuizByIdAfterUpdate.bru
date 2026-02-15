@@ -1,0 +1,25 @@
+meta {
+  name: 3-GetQuizByIdAfterUpdate
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/Quiz/{{createdQuizId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status er 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("Titel er opdateret", function() {
+    const d = res.getBody();
+    expect(d.title).to.include("opdateret");
+  });
+  test("Beskrivelse er opdateret", function() {
+    const d = res.getBody();
+    expect(d.description).to.include("Bruno E2E");
+  });
+}

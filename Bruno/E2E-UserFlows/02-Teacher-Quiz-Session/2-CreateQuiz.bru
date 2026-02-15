@@ -33,8 +33,9 @@ body:json {
 
 script:post-response {
   if (res.status === 201) {
-    const d = res.body;
-    if (d?.id) bru.setEnvVar("createdQuizId", d.id);
+    const d = typeof res.body === "string" ? JSON.parse(res.body) : (res.body || {});
+    if (d?.id != null) bru.setEnvVar("createdQuizId", String(d.id));
+    if (d?.pin) bru.setEnvVar("createdQuizPin", String(d.pin));
   }
 }
 

@@ -1,0 +1,28 @@
+meta {
+  name: 1-GetQuizByPin
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/Quiz/pin/{{createdQuizPin}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status er 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("Response matcher createdQuizId", function() {
+    const d = res.getBody();
+    const expectedId = parseInt(bru.getEnvVar("createdQuizId"), 10);
+    expect(d).to.have.property("id");
+    expect(d.id).to.equal(expectedId);
+  });
+  test("Quiz har pin og questions", function() {
+    const d = res.getBody();
+    expect(d).to.have.property("pin");
+    expect(d).to.have.property("questions");
+  });
+}

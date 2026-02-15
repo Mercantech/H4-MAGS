@@ -1,0 +1,17 @@
+meta {
+  name: 4-GetQuizNotFound
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/Quiz/99999999
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status er 404 Not Found", function() {
+    expect(res.getStatus()).to.equal(404);
+  });
+}

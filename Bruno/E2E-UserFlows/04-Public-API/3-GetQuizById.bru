@@ -1,0 +1,31 @@
+meta {
+  name: 3-GetQuizById
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/Quiz/{{createdQuizId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status er 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("Response indeholder quiz id, title og questions", function() {
+    const d = res.getBody();
+    expect(d).to.have.property("id");
+    expect(d).to.have.property("title");
+    expect(d).to.have.property("questions");
+    expect(d.questions).to.be.an("array");
+  });
+  test("Mindst ét spørgsmål med answers", function() {
+    const d = res.getBody();
+    if (d.questions && d.questions.length > 0) {
+      expect(d.questions[0]).to.have.property("answers");
+      expect(d.questions[0].answers).to.be.an("array");
+    }
+  });
+}

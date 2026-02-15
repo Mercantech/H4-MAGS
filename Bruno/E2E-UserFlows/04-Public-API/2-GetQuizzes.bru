@@ -1,0 +1,28 @@
+meta {
+  name: 2-GetQuizzes
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/Quiz
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status er 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("Response er array", function() {
+    expect(res.getBody()).to.be.an("array");
+  });
+  test("Quiz-objekter har id, title og pin", function() {
+    const arr = res.getBody();
+    if (arr.length > 0) {
+      expect(arr[0]).to.have.property("id");
+      expect(arr[0]).to.have.property("title");
+      expect(arr[0]).to.have.property("pin");
+    }
+  });
+}

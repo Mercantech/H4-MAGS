@@ -6,15 +6,16 @@ meta {
 docs {
   # E2E Test Suite – standard user flows
   
-  Kør hele suiten: `bru run E2E-UserFlows` (eller `bru run` for hele collection).
-  Miljø: Bruge environment "Kahoot" med baseUrl sat.
+  Kør hele suiten: `bru run E2E-UserFlows -r` med env Kahoot og baseUrl.
   
-  ## Flow-rækkefølge (vigtig)
-  1. **01-Auth-Lifecycle** – Registrering, login, get me, refresh, logout (sætter authToken, createdUserId).
-  2. **02-Teacher-Quiz-Session** – Opret quiz, opret session, start session (sætter createdQuizId, sessionId, sessionPin).
-  3. **03-Student-Play** – Join med PIN, hent spørgsmål, indsend svar, hent leaderboard (bruger sessionPin, sessionId fra 02).
+  ## Flow-rækkefølge
+  1. **01-Auth-Lifecycle** – Register, login, refresh (sætter authToken, createdUserId, refreshToken).
+  2. **02-Teacher-Quiz-Session** – Login, opret quiz, session, join, start (sætter createdQuizId, createdQuizPin, sessionId, sessionPin).
+  3. **03-Student-Play** – Hent spørgsmål, indsend svar, leaderboard.
+  4. **04-Public-API** – WeatherForecast, GetQuizzes, GetQuizById, GetQuiz 404.
+  5. **05-Quiz-Read-Update** – GetQuizByPin, UpdateQuiz, GetQuizById (verificer opdatering).
   
-  Variabler der sættes og bruges på tværs af flows: createdUserId, authToken, createdQuizId, sessionId, sessionPin, participantId.
+  Variabler: createdUserId, authToken, createdQuizId, createdQuizPin, sessionId, sessionPin, participantId.
 }
 
 auth {
