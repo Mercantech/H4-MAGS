@@ -23,6 +23,18 @@ script:post-response {
     const refreshToken = d?.refreshToken ?? d?.RefreshToken;
     if (token) bru.setEnvVar("authToken", String(token));
     if (refreshToken) bru.setEnvVar("refreshToken", String(refreshToken));
+    const path = require("path");
+    const fs = require("fs");
+    const authFile = path.join(process.cwd(), "E2E-UserFlows", "01-Auth-Lifecycle", ".e2e-auth.json");
+    try {
+      let data = {};
+      if (fs.existsSync(authFile)) {
+        data = JSON.parse(fs.readFileSync(authFile, "utf8"));
+      }
+      if (token) data.authToken = String(token);
+      if (refreshToken) data.refreshToken = String(refreshToken);
+      fs.writeFileSync(authFile, JSON.stringify(data), "utf8");
+    } catch (e) {}
   }
 }
 

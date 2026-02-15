@@ -35,6 +35,13 @@ script:post-response {
     if (user?.id != null) bru.setEnvVar("createdUserId", String(user.id));
     if (token) bru.setEnvVar("authToken", String(token));
     if (refreshToken) bru.setEnvVar("refreshToken", String(refreshToken));
+    const path = require("path");
+    const fs = require("fs");
+    const authFile = path.join(process.cwd(), "E2E-UserFlows", "01-Auth-Lifecycle", ".e2e-auth.json");
+    try {
+      const data = { authToken: token || "", refreshToken: refreshToken || "", createdUserId: user?.id != null ? String(user.id) : "" };
+      fs.writeFileSync(authFile, JSON.stringify(data), "utf8");
+    } catch (e) {}
   }
 }
 
