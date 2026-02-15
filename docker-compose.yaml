@@ -65,7 +65,9 @@ services:
   # Bind tunnel til denne service (port 80) for fx https://kahoot-bruno.mercantec.tech
   # Rapporten opdateres når I kører: docker compose --profile cli run bruno-cli (som job i Dokploy)
   bruno-reports:
-    image: nginx:alpine
+    build:
+      context: ./Bruno
+      dockerfile: reports-Dockerfile
     ports:
       - "9083:80"
     volumes:
