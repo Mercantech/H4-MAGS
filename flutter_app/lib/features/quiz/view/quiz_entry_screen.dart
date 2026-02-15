@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../core/config/app_config.dart';
 import '../bloc/quiz_bloc.dart';
 import '../bloc/quiz_event.dart';
 import '../bloc/quiz_state.dart';
@@ -37,9 +39,34 @@ class _QuizEntryScreenState extends State<QuizEntryScreen> {
     super.dispose();
   }
 
+  Future<void> _openE2eReport() async {
+    final urlString = AppConfig.instance.e2eReportUrl;
+    if (urlString == null) return;
+    final uri = Uri.parse(urlString);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kunne ikke åbne E2E-rapport. Kør bruno-reports (port 9083).')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppConfig.instance.e2eReportUrl != null
+          ? AppBar(
+              title: const Text('Kahoot'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.assessment_outlined),
+                  tooltip: 'Åbn E2E testrapport',
+                  onPressed: _openE2eReport,
+                ),
+              ],
+            )
+          : null,
       body: SafeArea(
         child: BlocListener<QuizBloc, QuizState>(
           listener: (context, state) {

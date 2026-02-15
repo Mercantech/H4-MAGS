@@ -28,6 +28,12 @@ class AppConfig {
     required this.enableErrorLogging,
   });
 
+  /// URL til E2E Bruno-rapport (HTML). Kun sat i development; åbnes fx fra "E2E rapport" i appen.
+  /// Forudsætter at bruno-reports kører: docker compose --profile cli up bruno-reports -d
+  String? get e2eReportUrl => environment.e2eReportBaseUrl != null
+      ? '${environment.e2eReportBaseUrl!.replaceAll(RegExp(r'/$'), '')}/results.html'
+      : null;
+
   /// Singleton instance
   static AppConfig get instance {
     if (_instance == null) {
@@ -72,6 +78,8 @@ class Environment {
   final int apiTimeout;
   final bool enableApiLogging;
   final bool enableErrorLogging;
+  /// Base URL til E2E Bruno-rapport (fx http://localhost:9083). Null = skjul "E2E rapport" i appen.
+  final String? e2eReportBaseUrl;
 
   const Environment._({
     required this.name,
@@ -79,6 +87,7 @@ class Environment {
     required this.apiTimeout,
     required this.enableApiLogging,
     required this.enableErrorLogging,
+    this.e2eReportBaseUrl,
   });
 
   /// Development environment (localhost)
@@ -90,6 +99,7 @@ class Environment {
     apiTimeout: 30000, // 30 sekunder
     enableApiLogging: true,
     enableErrorLogging: true,
+    e2eReportBaseUrl: 'http://localhost:9083',
   );
 
   /// Production environment (deployed)
@@ -100,6 +110,7 @@ class Environment {
     apiTimeout: 30000, // 30 sekunder
     enableApiLogging: false, // Slå logging fra i produktion for performance
     enableErrorLogging: true,
+    e2eReportBaseUrl: null,
   );
 
   /// Staging environment (optional)
@@ -110,6 +121,7 @@ class Environment {
     apiTimeout: 30000,
     enableApiLogging: true,
     enableErrorLogging: true,
+    e2eReportBaseUrl: null,
   );
 
   @override

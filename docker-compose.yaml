@@ -46,18 +46,32 @@ services:
     networks:
       - app-network
 
-  # Bruno CLI – kør E2E-UserFlows mod jeres API. Kør: docker compose --profile cli run bruno-cli
+  # Bruno CLI – kør E2E-UserFlows og skriv HTML-rapport. Kør: docker compose --profile cli run bruno-cli
+  # Rapport: ./reports/bruno/results.html (eller åbn via bruno-reports på port 9083)
   bruno-cli:
     build:
       context: ./Bruno
       dockerfile: Dockerfile
     volumes:
       - ./Bruno:/collection
+      - bruno-reports:/collection/reports
     environment:
       - API_BASE_URL=https://kahoot-api.mercantec.tech
-    command: ["sh", "-c", "bru run --env Kahoot --env-var \"baseUrl=$$API_BASE_URL\" E2E-UserFlows"]
+    command: ["sh", "-c", "mkdir -p /collection/reports && bru run --env Kahoot --env-var \"baseUrl=$$API_BASE_URL\" E2E-UserFlows --reporter-html /collection/reports/results.html"]
     profiles:
       - cli
+
+  # Server E2E-rapporten så Flutter/ browser kan åbne den. Start: docker compose --profile cli up bruno-reports -d
+  # Rapporten er kun opdateret efter: docker compose --profile cli run bruno-cli
+  bruno-reports:
+    image: nginx:alpine
+    ports:
+      - "9083:80"
+    volumes:
+      - bruno-reports:/usr/share/nginx/html:ro
+    profiles:
+      - cli
+    # Rapporten åbnes som: http://localhost:9083/results.html
 
 networks:
   app-network:
@@ -65,3 +79,4 @@ networks:
 
 volumes:
   seq-data:
+  bruno-reports:
