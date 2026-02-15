@@ -54,20 +54,25 @@ class _QuizEntryScreenState extends State<QuizEntryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppConfig.instance.e2eReportUrl != null
-          ? AppBar(
-              title: const Text('Kahoot'),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.assessment_outlined),
-                  tooltip: 'Åbn E2E testrapport',
-                  onPressed: _openE2eReport,
-                ),
-              ],
-            )
-          : null,
-      body: SafeArea(
+    return BlocBuilder<AuthBloc, AuthState>(
+      buildWhen: (prev, curr) => prev.runtimeType != curr.runtimeType,
+      builder: (context, authState) {
+        final showE2eReport = AppConfig.instance.e2eReportUrl != null &&
+            authState is AuthAuthenticated;
+        return Scaffold(
+          appBar: showE2eReport
+              ? AppBar(
+                  title: const Text('Kahoot'),
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.assessment_outlined),
+                      tooltip: 'Åbn E2E testrapport',
+                      onPressed: _openE2eReport,
+                    ),
+                  ],
+                )
+              : AppBar(title: const Text('Kahoot')),
+          body: SafeArea(
         child: BlocListener<QuizBloc, QuizState>(
           listener: (context, state) {
             if (state is QuizSessionFound) {
@@ -161,6 +166,8 @@ class _QuizEntryScreenState extends State<QuizEntryScreen> {
           ),
         ),
       ),
+        );
+      },
     );
   }
 

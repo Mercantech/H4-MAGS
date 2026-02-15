@@ -110,7 +110,7 @@ class Environment {
     apiTimeout: 30000, // 30 sekunder
     enableApiLogging: false, // Slå logging fra i produktion for performance
     enableErrorLogging: true,
-    e2eReportBaseUrl: null,
+    e2eReportBaseUrl: 'https://kahoot-bruno.mercantec.tech',
   );
 
   /// Staging environment (optional)
