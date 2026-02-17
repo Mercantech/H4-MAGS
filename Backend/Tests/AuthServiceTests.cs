@@ -315,14 +315,14 @@ public class AuthServiceTests
     }
 
     /// <summary>
-    /// Test 13: LoginAsync skal afvise forkert password
+    /// Test 13: LoginAsync skal afvise ikke stærkt nok password
     /// </summary>
     [Test]
     public async Task LoginAsync_WithIncorrectPassword_ReturnsNull()
     {
         // ARRANGE
         var username = "loginbruger2";
-        var password = "KorrektPassword123";
+        var password = "KorrektPassword123!";
         await _authService.RegisterAsync(username, "test@example.com", password, UserRole.Student);
 
         // ACT

@@ -44,10 +44,13 @@ public class JwtServiceTests
     [Test]
     public void GenerateToken_WithValidUser_ReturnsNonEmptyToken()
     {
+        // ARRANGE
         var user = CreateTestUser(1, "testbruger", "test@example.com", UserRole.Student);
 
+        // ACT
         var token = _jwtService.GenerateToken(user);
 
+        // ASSERT
         Assert.That(token, Is.Not.Null.And.Not.Empty);
         Assert.That(token.Split('.').Length, Is.EqualTo(3), "JWT skal have 3 segmenter (header.payload.signature)");
     }
