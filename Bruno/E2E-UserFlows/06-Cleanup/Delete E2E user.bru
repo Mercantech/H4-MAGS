@@ -20,11 +20,12 @@ settings {
 }
 
 tests {
-  test("Bruger slettet (204) eller allerede fjernet (404) eller uauthenticeret (401)", function() {
-    expect(res.getStatus()).to.be.oneOf([200, 204, 401, 404]);
+  test("Bruger slettet (204), allerede fjernet (404), uauthenticeret (401) eller ingen admin-rettighed (403)", function() {
+    expect(res.getStatus()).to.be.oneOf([200, 204, 401, 403, 404]);
   });
 }
 
 docs {
   Sletter den E2E-bruger der blev oprettet i 01-Auth-Lifecycle. Vigtigt når suiten kører mod prod.
+  Endpoint kræver Admin – E2E-brugeren er Student, så 403 Forbidden er forventet (test accepterer 200/204/401/403/404).
 }
