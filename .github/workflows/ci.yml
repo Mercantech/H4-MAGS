@@ -63,7 +63,10 @@ jobs:
 
       - name: Run Bruno collection mod demo-API
         working-directory: Bruno
-        run: bru run E2E-UserFlows -r --sandbox=developer --env Kahoot --env-var "baseUrl=http://localhost:9080" --reporter-junit bruno-results.xml
+        env:
+          NO_PROXY: "*"
+          no_proxy: "*"
+        run: bru run E2E-UserFlows -r --sandbox=developer --env Kahoot --env-var "baseUrl=http://localhost:9080" --reporter-junit bruno-results.xml --noproxy
 
       - name: Upload Bruno results (JUnit)
         if: always()
@@ -74,7 +77,10 @@ jobs:
 
       - name: Backend logs ved fejl
         if: failure()
-        run: docker compose -f docker-compose.test.yml logs backend
+        run: |
+          docker compose -f docker-compose.test.yml logs --tail=200 backend
+          echo "---"
+          docker compose -f docker-compose.test.yml logs --tail=50 postgres
 
       - name: Stop demo stack
         if: always()

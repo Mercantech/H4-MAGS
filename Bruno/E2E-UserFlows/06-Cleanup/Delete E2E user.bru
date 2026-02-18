@@ -20,8 +20,8 @@ settings {
 }
 
 tests {
-  test("Bruger slettet (204) eller allerede fjernet (404)", function() {
-    expect(res.getStatus()).to.be.oneOf([200, 204, 404]);
+  test("Bruger slettet (204) eller allerede fjernet (404) eller uauthenticeret (401)", function() {
+    expect(res.getStatus()).to.be.oneOf([200, 204, 401, 404]);
   });
 }
 

@@ -41,6 +41,9 @@ services:
       - Jwt__Audience=H4-MAGS-Client
       - Jwt__ExpirationMinutes=60
       - Jwt__RefreshTokenExpirationDays=7
+      # Deaktivér mail i demo (undgår SMTP-fejl i CI)
+      - Mail__UserName=
+      - Mail__Password=
     depends_on:
       postgres:
         condition: service_healthy
