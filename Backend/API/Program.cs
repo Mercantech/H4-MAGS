@@ -62,6 +62,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.Configure<MailSettings>(builder.Configuration.GetSection(MailSettings.SectionName));
 builder.Services.AddScoped<IMailService, MailService>();
 
+// MinIO (S3-kompatibel storage). I prod sættes Storage__MinIO__* via docker-compose env.
+builder.Services.Configure<MinioOptions>(builder.Configuration.GetSection(MinioOptions.SectionName));
+
 // Add custom services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
