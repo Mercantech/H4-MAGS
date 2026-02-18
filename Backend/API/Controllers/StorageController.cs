@@ -42,7 +42,6 @@ public class StorageController : ControllerBase
     /// Upload en fil til MinIO. Returnerer objektnøgle og URL til at hente filen via GET /api/storage/file/{key}.
     /// </summary>
     [HttpPost("upload")]
-    [Authorize]
     [RequestSizeLimit(5 * 1024 * 1024)] // 5 MB
     public async Task<ActionResult<StorageUploadResponse>> Upload(IFormFile? file, CancellationToken cancellationToken = default)
     {
