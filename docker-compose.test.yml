@@ -36,7 +36,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - RUN_MIGRATIONS=true
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=neondb;Username=neondb_owner;Password=testpass;Pooling=true;
-      - Jwt__SecretKey=demo-secret-key-min-32-chars!!
+      # HS256 kræver >256 bits (min. 33 bytes). 44 tegn = 352 bits.
+      - Jwt__SecretKey=demo-secret-key-for-ci-min-33-bytes-required!!
       - Jwt__Issuer=H4-MAGS-API
       - Jwt__Audience=H4-MAGS-Client
       - Jwt__ExpirationMinutes=60
