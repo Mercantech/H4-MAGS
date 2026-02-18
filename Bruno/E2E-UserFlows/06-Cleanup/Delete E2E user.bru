@@ -1,0 +1,30 @@
+meta {
+  name: Delete E2E user
+  type: http
+  seq: 1
+}
+
+delete {
+  url: {{baseUrl}}/api/user/{{createdUserId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+tests {
+  test("Bruger slettet (204) eller allerede fjernet (404)", function() {
+    expect(res.getStatus()).to.be.oneOf([200, 204, 404]);
+  });
+}
+
+docs {
+  Sletter den E2E-bruger der blev oprettet i 01-Auth-Lifecycle. Vigtigt når suiten kører mod prod.
+}

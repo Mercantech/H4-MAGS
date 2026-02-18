@@ -1,0 +1,54 @@
+# Demo/CI: Backend + PostgreSQL + Seq – ingen .env. Bruges i GitHub Actions og lokalt med:
+#   docker compose -f docker-compose.test.yml up -d
+# Bruno kører mod http://localhost:9080
+
+services:
+  seq:
+    image: datalust/seq:latest
+    environment:
+      ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_ADMINPASSWORD: Admin123!
+    networks:
+      - app-network
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: neondb_owner
+      POSTGRES_PASSWORD: testpass
+      POSTGRES_DB: neondb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neondb_owner -d neondb"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: API/Dockerfile
+    ports:
+      - "9080:5000"
+    environment:
+      - ASPNETCORE_URLS=http://+:5000
+      - ASPNETCORE_ENVIRONMENT=Production
+      - RUN_MIGRATIONS=true
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=neondb;Username=neondb_owner;Password=testpass;Pooling=true;
+      - Jwt__SecretKey=demo-secret-key-min-32-chars!!
+      - Jwt__Issuer=H4-MAGS-API
+      - Jwt__Audience=H4-MAGS-Client
+      - Jwt__ExpirationMinutes=60
+      - Jwt__RefreshTokenExpirationDays=7
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seq:
+        condition: service_started
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

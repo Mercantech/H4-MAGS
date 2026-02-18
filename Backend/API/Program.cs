@@ -124,6 +124,19 @@ builder.Services.AddSwaggerGen(c =>
 // OpenAPI configuration will be handled by middleware
 var app = builder.Build();
 
+// Kør EF-migrationer ved opstart i demo/CI (fx container med postgres)
+var connStr = builder.Configuration.GetConnectionStringWithEnv("DefaultConnection");
+var runMigrations = string.Equals(Environment.GetEnvironmentVariable("RUN_MIGRATIONS"), "true", StringComparison.OrdinalIgnoreCase)
+    || (connStr?.Contains("Host=postgres", StringComparison.OrdinalIgnoreCase) ?? false);
+if (runMigrations)
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        db.Database.Migrate();
+    }
+}
+
 app.MapDefaultEndpoints();
 
 // Configure the HTTP request pipeline.
